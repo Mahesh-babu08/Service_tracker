@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #f8fafc;
+    --foreground: #0f172a;
+
+    --card: #ffffff;
+    --card-foreground: #0f172a;
+
+    --border: #e2e8f0;
+    --input: #e2e8f0;
+
+    --primary: #6366f1;
+    --primary-foreground: #ffffff;
+
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+
+    --success: #22c55e;
+    --success-foreground: #ffffff;
+
+    --warning: #f59e0b;
+    --warning-foreground: #ffffff;
+  }
+
+  .dark {
+    --background: #0f172a;
+    --foreground: #f8fafc;
+
+    --card: #1e293b;
+    --card-foreground: #f8fafc;
+
+    --border: #334155;
+    --input: #334155;
+
+    --primary: #818cf8;
+    --primary-foreground: #ffffff;
+
+    --destructive: #f87171;
+    --destructive-foreground: #ffffff;
+
+    --success: #4ade80;
+    --success-foreground: #ffffff;
+
+    --warning: #fbbf24;
+    --warning-foreground: #ffffff;
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-[var(--background)] text-[var(--foreground)] antialiased transition-colors duration-300;
+  }
+}
+
+/* Glassmorphism Utilities */
+.glass {
+  @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-lg border border-white/20 dark:border-slate-800/50 shadow-glass;
+}
+
+.glass-card {
+  @apply bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 shadow-soft rounded-2xl;
+}
