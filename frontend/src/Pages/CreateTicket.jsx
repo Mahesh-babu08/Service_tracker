@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
-import { Box, AlignLeft } from 'lucide-react';
+import { Box, AlignLeft, Building } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '../Components/ui/Card';
 import { Input } from '../Components/ui/Input';
 import { Button } from '../Components/ui/Button';
@@ -10,8 +10,21 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
 export default function CreateTicket() {
-  const [formData, setFormData] = useState({ title: '', description: '' });
+  const [formData, setFormData] = useState({ title: '', description: '', departmentId: '' });
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const res = await api.get('/departments');
+        setDepartments(res.data);
+      } catch (err) {
+        console.error('Failed to load departments', err);
+      }
+    };
+    fetchDepartments();
+  }, []);
   const navigate = useNavigate();
 
   const handleSubmit = async () => {
@@ -22,7 +35,7 @@ export default function CreateTicket() {
 
     setLoading(true);
     try {
-      await api.post('/api/tickets', formData);
+      await api.post('/tickets', formData);
       toast.success('Request submitted successfully!');
       navigate('/requests');
     } catch (err) {
@@ -54,6 +67,23 @@ export default function CreateTicket() {
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             />
+
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-foreground">Department</label>
+              <div className="relative">
+                <Building className="absolute left-3 top-2.5 h-5 w-5 text-foreground/50" />
+                <select
+                  className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-colors appearance-none"
+                  value={formData.departmentId}
+                  onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
+                >
+                  <option value="">Select a department (optional)</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>{dept.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
             <div className="relative pt-2">
               <div className="absolute left-3 top-5 text-gray-500 dark:text-gray-400">

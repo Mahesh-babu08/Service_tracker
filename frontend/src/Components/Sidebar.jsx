@@ -14,7 +14,7 @@ import {
 import { Button } from './ui/Button';
 
 const navItems = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'All Requests', href: '/requests', icon: List },
     { name: 'Create Request', href: '/create', icon: PlusCircle },
     { name: 'Admin Panel', href: '/admin', icon: ShieldCheck },

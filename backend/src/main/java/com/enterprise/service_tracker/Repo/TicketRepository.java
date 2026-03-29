@@ -2,8 +2,7 @@ package com.enterprise.service_tracker.Repo;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 
 import com.enterprise.service_tracker.entity.Ticket;
 import com.enterprise.service_tracker.enums.Status;
@@ -13,16 +12,9 @@ import java.util.List;
 
 public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
-    // ================= BASIC =================
-
     List<Ticket> findByUserId(Long userId);
 
     List<Ticket> findByAssignedToId(Long staffId);
-
-
-    // ================= PAGINATION =================
-
-    Page<Ticket> findAll(Pageable pageable);
 
     Page<Ticket> findByStatus(Status status, Pageable pageable);
 
@@ -30,8 +22,7 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
     Page<Ticket> findByTitleContainingIgnoreCase(String keyword, Pageable pageable);
 
-
-    // ================= REPORTING =================
+    // ✅ REPORT QUERIES
 
     @Query("SELECT COUNT(t) FROM Ticket t")
     Long getTotalTickets();

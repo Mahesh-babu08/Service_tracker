@@ -26,13 +26,16 @@ public class TicketService {
     }
 
     public Ticket createTicket(String title, String description,
-                               Long userId, Long departmentId) {
+                               String email, Long departmentId) {
 
-        User user = userRepo.findById(userId)
+        User user = userRepo.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Department dept = departmentRepo.findById(departmentId)
+        Department dept = null;
+        if (departmentId != null) {
+            dept = departmentRepo.findById(departmentId)
                 .orElseThrow(() -> new RuntimeException("Department not found"));
+        }
 
         Ticket ticket = new Ticket(title, description, user, dept);
 
@@ -41,6 +44,12 @@ public class TicketService {
 
     public List<Ticket> getUserTickets(Long userId) {
         return ticketRepo.findByUserId(userId);
+    }
+
+    public List<Ticket> getUserTicketsByEmail(String email) {
+        User user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return ticketRepo.findByUserId(user.getId());
     }
 
     public List<Ticket> getAllTickets() {

@@ -18,12 +18,12 @@ public class UserController {
         this.authService = authService;
     }
 
-    @PostMapping("/register")
+    @PostMapping("/register-user")
     public ResponseEntity<?> register(@RequestBody User user) {
         return ResponseEntity.ok(authService.register(user));
     }
 
-    @PostMapping("/login")
+    @PostMapping("/login-user")
     public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
 
         String token = authService.login(

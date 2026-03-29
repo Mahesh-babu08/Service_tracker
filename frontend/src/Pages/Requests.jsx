@@ -6,6 +6,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '../Components/ui/Card'
 import { Badge } from '../Components/ui/Badge';
 import { Button } from '../Components/ui/Button';
 import { Loader } from '../Components/ui/Loader';
+import { useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import api from '../Services/api';
 import toast from 'react-hot-toast';
 
@@ -41,10 +43,27 @@ export default function Requests() {
     const [totalPages, setTotalPages] = useState(1);
     const [totalElements, setTotalElements] = useState(0);
 
+    const location = useLocation();
+    const searchParams = new URLSearchParams(location.search);
+    const searchString = searchParams.get('search') || '';
+    const { user } = useAuth();
+    
+    // Manage local filtering state (mostly used for standard users)
+    const [statusFilter, setStatusFilter] = useState('');
+    const [priorityFilter, setPriorityFilter] = useState('');
+    const [searchInput, setSearchInput] = useState(searchString);
+
     const fetchTickets = async (pageNumber = 0) => {
         setLoading(true);
         try {
-            const res = await api.get(`/api/tickets?page=${pageNumber}&size=10`);
+            let endpoint = '/tickets/my';
+            if (user?.role === 'ADMIN') {
+                if (statusFilter) endpoint = `/tickets/filter/status?status=${statusFilter}&page=${pageNumber}&size=10`;
+                else if (priorityFilter) endpoint = `/tickets/filter/priority?priority=${priorityFilter}&page=${pageNumber}&size=10`;
+                else if (searchInput) endpoint = `/tickets/search?keyword=${searchInput}&page=${pageNumber}&size=10`;
+                else endpoint = `/tickets/paginated?page=${pageNumber}&size=10`;
+            }
+            const res = await api.get(endpoint);
             if (res.data && res.data.content) {
                 setTickets(res.data.content);
                 setTotalPages(res.data.totalPages);
@@ -66,8 +85,29 @@ export default function Requests() {
     };
 
     useEffect(() => {
+        setPage(0);
         fetchTickets(0);
-    }, []);
+    }, [user, statusFilter, priorityFilter, searchInput]);
+
+    const filteredTickets = React.useMemo(() => {
+        let result = tickets;
+        if (user?.role !== 'ADMIN') {
+            if (searchInput) {
+                const lower = searchInput.toLowerCase();
+                result = result.filter(t => 
+                    t.title?.toLowerCase().includes(lower) || 
+                    t.id?.toString().includes(lower)
+                );
+            }
+            if (statusFilter) {
+                result = result.filter(t => t.status?.toUpperCase() === statusFilter.toUpperCase());
+            }
+            if (priorityFilter) {
+                result = result.filter(t => t.priority?.toUpperCase() === priorityFilter.toUpperCase());
+            }
+        }
+        return result;
+    }, [tickets, searchString]);
 
     return (
         <div className="space-y-6">
@@ -75,6 +115,31 @@ export default function Requests() {
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">All Requests</h1>
                     <p className="text-foreground/60 mt-1">View and track all your service requests.</p>
+                </div>
+                <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                    <select className="bg-background border border-border text-sm rounded-lg focus:ring-primary p-2 w-full sm:w-auto"
+                            value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+                        <option value="">All Statuses</option>
+                        <option value="OPEN">Open</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="IN_PROGRESS">In Progress</option>
+                        <option value="RESOLVED">Resolved</option>
+                        <option value="CLOSED">Closed</option>
+                    </select>
+                    <select className="bg-background border border-border text-sm rounded-lg focus:ring-primary p-2 w-full sm:w-auto"
+                            value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}>
+                        <option value="">All Priorities</option>
+                        <option value="LOW">Low</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="HIGH">High</option>
+                        <option value="CRITICAL">Critical</option>
+                    </select>
+                    <div className="relative w-full sm:w-auto">
+                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-foreground/50" />
+                        <input type="text" placeholder="Search tickets..."
+                               className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
+                               value={searchInput} onChange={e => setSearchInput(e.target.value)} />
+                    </div>
                 </div>
             </div>
 
@@ -98,7 +163,7 @@ export default function Requests() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/50">
-                                        {tickets.length > 0 ? tickets.map((req, i) => (
+                                        {filteredTickets.length > 0 ? filteredTickets.map((req, i) => (
                                             <motion.tr key={req.id} className="hover:bg-muted/30 transition-colors group">
                                                 <td className="px-6 py-4">
                                                     <div className="font-medium text-foreground">{req.title}</div>
@@ -115,7 +180,9 @@ export default function Requests() {
                                                 </td>
                                             </motion.tr>
                                         )) : (
-                                            <tr><td colSpan="4" className="text-center py-8 text-foreground/50">No tickets found.</td></tr>
+                                            <tr><td colSpan="4" className="text-center py-8 text-foreground/50">
+                                                {searchString ? `No tickets match "${searchString}"` : 'No tickets found.'}
+                                            </td></tr>
                                         )}
                                     </tbody>
                                 </table>

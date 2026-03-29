@@ -23,13 +23,20 @@ public class TicketController {
     }
 
     @PostMapping
-    public ResponseEntity<Ticket> createTicket(@RequestBody Map<String, String> request) {
+    public ResponseEntity<Ticket> createTicket(@RequestBody Map<String, String> request, java.security.Principal principal) {
+
+        String email = principal.getName();
+        Long departmentId = null;
+        
+        if (request.containsKey("departmentId") && request.get("departmentId") != null && !request.get("departmentId").toString().isEmpty()) {
+            departmentId = Long.parseLong(request.get("departmentId"));
+        }
 
         Ticket ticket = ticketService.createTicket(
                 request.get("title"),
                 request.get("description"),
-                Long.parseLong(request.get("userId")),
-                Long.parseLong(request.get("departmentId"))
+                email,
+                departmentId
         );
 
         return ResponseEntity.ok(ticket);
@@ -38,6 +45,11 @@ public class TicketController {
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<Ticket>> getUserTickets(@PathVariable Long userId) {
         return ResponseEntity.ok(ticketService.getUserTickets(userId));
+    }
+
+    @GetMapping("/my")
+    public ResponseEntity<List<Ticket>> getMyTickets(java.security.Principal principal) {
+        return ResponseEntity.ok(ticketService.getUserTicketsByEmail(principal.getName()));
     }
 
     @GetMapping

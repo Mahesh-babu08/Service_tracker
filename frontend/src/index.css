@@ -4,63 +4,99 @@
 
 @layer base {
   :root {
-    --background: #f8fafc;
-    --foreground: #0f172a;
+    --background: 216 33% 97%;
+    /* #f5f7fa */
+    --foreground: 0 0% 13%;
+    /* #222 */
 
-    --card: #ffffff;
-    --card-foreground: #0f172a;
+    --card: 0 0% 100%;
+    /* white */
+    --card-foreground: 0 0% 13%;
 
-    --border: #e2e8f0;
-    --input: #e2e8f0;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 13%;
 
-    --primary: #6366f1;
-    --primary-foreground: #ffffff;
+    --primary: 243 75% 59%;
+    --primary-foreground: 210 40% 98%;
 
-    --destructive: #ef4444;
-    --destructive-foreground: #ffffff;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
 
-    --success: #22c55e;
-    --success-foreground: #ffffff;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
-    --warning: #f59e0b;
-    --warning-foreground: #ffffff;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 243 75% 59%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 210 40% 98%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 210 40% 98%;
   }
 
   .dark {
-    --background: #0f172a;
-    --foreground: #f8fafc;
+    --background: 0 0% 7%;
+    /* #121212 approx */
+    --foreground: 0 0% 100%;
+    /* #ffffff */
 
-    --card: #1e293b;
-    --card-foreground: #f8fafc;
+    --card: 0 0% 12%;
+    /* #1e1e1e approx */
+    --card-foreground: 0 0% 100%;
 
-    --border: #334155;
-    --input: #334155;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: #818cf8;
-    --primary-foreground: #ffffff;
+    --primary: 243 75% 59%;
+    --primary-foreground: 0 0% 100%;
 
-    --destructive: #f87171;
-    --destructive-foreground: #ffffff;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 0 0% 98%;
 
-    --success: #4ade80;
-    --success-foreground: #ffffff;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
 
-    --warning: #fbbf24;
-    --warning-foreground: #ffffff;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 0 0% 98%;
+
+    --border: 217.2 32.6% 25%;
+    --input: 217.2 32.6% 25%;
+    --ring: 243 75% 65%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 0 0% 98%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 98%;
   }
 }
 
 @layer base {
   body {
-    @apply bg-[var(--background)] text-[var(--foreground)] antialiased transition-colors duration-300;
+    @apply bg-background text-foreground antialiased transition-colors duration-300;
   }
 }
 
 /* Glassmorphism Utilities */
 .glass {
-  @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-lg border border-white/20 dark:border-slate-800/50 shadow-glass;
+  @apply bg-white/70 dark:bg-[#121212]/70 backdrop-blur-lg border border-white/20 dark:border-white/5 shadow-glass;
 }
 
 .glass-card {
-  @apply bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 shadow-soft rounded-2xl;
+  @apply bg-white/80 dark:bg-[#1e1e1e]/80 backdrop-blur-md border border-slate-200/50 dark:border-white/10 shadow-soft rounded-2xl;
+}
+
+.glass-navbar {
+  @apply bg-white/60 dark:bg-[#121212]/60 backdrop-blur-md border-b border-white/20 dark:border-white/5;
 }

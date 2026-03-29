@@ -1,11 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Menu, Search, Bell, Sun, Moon, LogOut, User as UserIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { useAuth } from '../context/AuthContext';
 
 export function Navbar({ onMenuClick }) {
     const { user, logout } = useAuth();
+    const navigate = useNavigate();
+    const [searchQuery, setSearchQuery] = useState('');
     const [isDark, setIsDark] = useState(
         document.documentElement.classList.contains('dark') ||
         window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -33,6 +36,17 @@ export function Navbar({ onMenuClick }) {
 
     const toggleTheme = () => setIsDark(!isDark);
 
+    const handleSearchKeyPress = (e) => {
+        if (e.key === 'Enter') {
+            if (searchQuery.trim()) {
+                navigate(`/requests?search=${encodeURIComponent(searchQuery.trim())}`);
+            } else {
+                navigate('/requests');
+            }
+            setSearchQuery('');
+        }
+    };
+
     return (
         <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-md transition-all shadow-sm">
             <div className="flex items-center gap-4 flex-1">
@@ -40,7 +54,15 @@ export function Navbar({ onMenuClick }) {
                     <Menu size={24} />
                 </button>
                 <div className="hidden md:block w-full max-w-sm">
-                    <Input type="text" placeholder="Search requests..." icon={Search} className="h-10 bg-muted/50 border-none" />
+                    <Input 
+                        type="text" 
+                        placeholder="Search tickets (press Enter)..." 
+                        icon={Search} 
+                        className="h-10 bg-muted/50 border-none"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={handleSearchKeyPress} 
+                    />
                 </div>
             </div>
 

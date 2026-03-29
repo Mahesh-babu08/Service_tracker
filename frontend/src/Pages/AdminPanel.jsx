@@ -30,10 +30,27 @@ export default function AdminPanel() {
     const [assigningId, setAssigningId] = useState(null);
     const [staffIdInput, setStaffIdInput] = useState('');
 
+    const [departments, setDepartments] = useState([]);
+    const [newDeptName, setNewDeptName] = useState('');
+    const [loadingDepts, setLoadingDepts] = useState(true);
+
+    const fetchDepartments = async () => {
+        setLoadingDepts(true);
+        try {
+            const res = await api.get('/departments');
+            setDepartments(res.data);
+        } catch (err) {
+            console.error(err);
+            toast.error('Failed to load departments');
+        } finally {
+            setLoadingDepts(false);
+        }
+    };
+
     const fetchTickets = async (pageNumber = 0) => {
         setLoading(true);
         try {
-            const res = await api.get(`/api/tickets?page=${pageNumber}&size=10`);
+            const res = await api.get(`/tickets/paginated?page=${pageNumber}&size=10`);
             if (res.data && res.data.content) {
                 setTickets(res.data.content);
                 setTotalPages(res.data.totalPages);
@@ -54,11 +71,27 @@ export default function AdminPanel() {
 
     useEffect(() => {
         fetchTickets(0);
+        fetchDepartments();
     }, []);
+
+    const handleCreateDepartment = async () => {
+        if (!newDeptName.trim()) {
+            toast.error('Please enter a department name');
+            return;
+        }
+        try {
+            await api.post('/departments', { name: newDeptName });
+            toast.success('Department created');
+            setNewDeptName('');
+            fetchDepartments();
+        } catch (err) {
+            toast.error('Failed to create department');
+        }
+    };
 
     const handleStatusChange = async (ticketId, selectedStatus) => {
         try {
-            await api.put(`/api/tickets/status/${ticketId}?status=${selectedStatus}`);
+            await api.put(`/tickets/status/${ticketId}?status=${selectedStatus}`);
             toast.success('Status updated successfully');
             fetchTickets(page);
         } catch (err) {
@@ -72,7 +105,7 @@ export default function AdminPanel() {
             return;
         }
         try {
-            await api.put(`/api/tickets/assign/${ticketId}/${staffIdInput}`);
+            await api.put(`/tickets/assign/${ticketId}/${staffIdInput}`);
             toast.success('Ticket assigned successfully');
             setAssigningId(null);
             setStaffIdInput('');
@@ -175,6 +208,50 @@ export default function AdminPanel() {
                                 </div>
                             </div>
                         )}
+                    </CardContent>
+                </Card>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }}>
+                <Card className="border-border/50 shadow-soft overflow-hidden mt-8">
+                    <CardHeader className="border-b border-border/50 bg-muted/10 pb-4">
+                        <CardTitle>Departments Management</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                        <div className="flex flex-col md:flex-row gap-8">
+                            <div className="flex-1">
+                                <h3 className="text-lg font-medium mb-4">Existing Departments</h3>
+                                {loadingDepts ? (
+                                    <Loader />
+                                ) : (
+                                    <ul className="space-y-2">
+                                        {departments.length > 0 ? departments.map(dept => (
+                                            <li key={dept.id} className="p-3 bg-muted/30 rounded-lg border border-border flex justify-between items-center">
+                                                <span className="font-medium">{dept.name}</span>
+                                                <span className="text-xs text-foreground/50">ID: {dept.id}</span>
+                                            </li>
+                                        )) : (
+                                            <li className="text-foreground/50 text-sm">No departments found.</li>
+                                        )}
+                                    </ul>
+                                )}
+                            </div>
+                            <div className="w-full md:w-1/3">
+                                <h3 className="text-lg font-medium mb-4">Create New</h3>
+                                <div className="space-y-4">
+                                    <div>
+                                        <input
+                                            type="text"
+                                            placeholder="Department Name"
+                                            className="w-full p-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
+                                            value={newDeptName}
+                                            onChange={(e) => setNewDeptName(e.target.value)}
+                                        />
+                                    </div>
+                                    <Button onClick={handleCreateDepartment} className="w-full">Add Department</Button>
+                                </div>
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
             </motion.div>

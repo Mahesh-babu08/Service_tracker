@@ -8,7 +8,7 @@ import com.enterprise.service_tracker.Repo.TicketRepository;
 @Service
 public class ReportService {
 
-    private TicketRepository ticketRepository;
+    private final TicketRepository ticketRepository;
 
     public ReportService(TicketRepository ticketRepository) {
         this.ticketRepository = ticketRepository;
@@ -19,6 +19,7 @@ public class ReportService {
         Map<String, Object> report = new HashMap<>();
 
         Long totalTickets = ticketRepository.getTotalTickets();
+
         List<Object[]> statusData = ticketRepository.getTicketCountByStatus();
         List<Object[]> departmentData = ticketRepository.getTicketCountByDepartment();
         List<Object[]> priorityData = ticketRepository.getTicketCountByPriority();
@@ -33,9 +34,11 @@ public class ReportService {
 
     private Map<String, Long> convertToMap(List<Object[]> data) {
         Map<String, Long> map = new HashMap<>();
+
         for (Object[] row : data) {
             map.put(row[0].toString(), (Long) row[1]);
         }
+
         return map;
     }
 }
