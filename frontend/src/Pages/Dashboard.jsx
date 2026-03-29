@@ -5,7 +5,9 @@ import { Card, CardHeader, CardTitle, CardContent } from '../Components/ui/Card'
 import { Badge } from '../Components/ui/Badge';
 import { Loader } from '../Components/ui/Loader';
 import { useAuth } from '../context/AuthContext';
+import { usePreferences } from '../context/PreferencesContext';
 import api from '../Services/api';
+import { getLocaleForLanguage } from '../utils/preferences';
 import toast from 'react-hot-toast';
 
 const getStatusBadge = (status) => {
@@ -35,9 +37,11 @@ const getPriorityColor = (priority) => {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { preferences } = usePreferences();
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [recentRequests, setRecentRequests] = useState([]);
+  const locale = getLocaleForLanguage(preferences.language);
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -155,7 +159,7 @@ export default function Dashboard() {
                         </td>
                         <td className="px-6 py-4">{getStatusBadge(req.status)}</td>
                         <td className="px-6 py-4"><span className={`font-medium ${getPriorityColor(req.priority)}`}>{req.priority || 'N/A'}</span></td>
-                        <td className="px-6 py-4 text-foreground/50">{req.createdAt || req.date ? new Date(req.createdAt || req.date).toLocaleDateString() : 'N/A'}</td>
+                        <td className="px-6 py-4 text-foreground/50">{req.createdAt || req.date ? new Date(req.createdAt || req.date).toLocaleDateString(locale) : 'N/A'}</td>
                       </motion.tr>
                     )) : <tr><td colSpan="4" className="text-center py-6 text-foreground/50">No recent requests</td></tr>}
                   </tbody>

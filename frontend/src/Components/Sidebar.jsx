@@ -12,17 +12,19 @@ import {
     LogOut
 } from 'lucide-react';
 import { Button } from './ui/Button';
-
-const navItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'All Requests', href: '/requests', icon: List },
-    { name: 'Create Request', href: '/create', icon: PlusCircle },
-    { name: 'Admin Panel', href: '/admin', icon: ShieldCheck },
-    { name: 'Settings', href: '/settings', icon: Settings },
-];
+import { useAuth } from '../context/AuthContext';
 
 export function Sidebar({ isOpen, setIsOpen, isMobile }) {
     const location = useLocation();
+    const { user } = useAuth();
+
+    const navItems = [
+        { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+        { name: 'All Requests', href: '/requests', icon: List },
+        { name: 'Create Request', href: '/create', icon: PlusCircle },
+        ...(user?.role === 'ADMIN' ? [{ name: 'Admin Panel', href: '/admin', icon: ShieldCheck }] : []),
+        { name: 'Settings', href: '/settings', icon: Settings },
+    ];
 
     const handleMobileClick = () => {
         if (isMobile) {

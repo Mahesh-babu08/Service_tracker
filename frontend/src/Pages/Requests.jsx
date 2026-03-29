@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../Components/ui/Card';
 import { Badge } from '../Components/ui/Badge';
 import { Button } from '../Components/ui/Button';
 import { Loader } from '../Components/ui/Loader';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { usePreferences } from '../context/PreferencesContext';
 import api from '../Services/api';
+import { getLocaleForLanguage } from '../utils/preferences';
 import toast from 'react-hot-toast';
 
 const getStatusBadge = (status) => {
@@ -47,6 +49,8 @@ export default function Requests() {
     const searchParams = new URLSearchParams(location.search);
     const searchString = searchParams.get('search') || '';
     const { user } = useAuth();
+    const { preferences } = usePreferences();
+    const locale = getLocaleForLanguage(preferences.language);
     
     // Manage local filtering state (mostly used for standard users)
     const [statusFilter, setStatusFilter] = useState('');
@@ -134,12 +138,7 @@ export default function Requests() {
                         <option value="HIGH">High</option>
                         <option value="CRITICAL">Critical</option>
                     </select>
-                    <div className="relative w-full sm:w-auto">
-                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-foreground/50" />
-                        <input type="text" placeholder="Search tickets..."
-                               className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
-                               value={searchInput} onChange={e => setSearchInput(e.target.value)} />
-                    </div>
+                    {/* Search input removed */}
                 </div>
             </div>
 
@@ -176,7 +175,7 @@ export default function Requests() {
                                                     <span className={`font-medium ${getPriorityColor(req.priority)}`}>{req.priority || 'N/A'}</span>
                                                 </td>
                                                 <td className="px-6 py-4 text-right text-foreground/50">
-                                                    {new Date(req.createdAt || req.date || new Date()).toLocaleString()}
+                                                    {new Date(req.createdAt || req.date || new Date()).toLocaleString(locale)}
                                                 </td>
                                             </motion.tr>
                                         )) : (

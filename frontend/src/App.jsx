@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { PreferencesProvider } from "./context/PreferencesContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { NotificationProvider } from "./context/NotificationContext";
 import { ProtectedRoute } from "./Components/ProtectedRoute";
 import { AdminRoute } from "./Components/AdminRoute";
 import { Layout } from "./Components/Layout";
@@ -18,23 +20,27 @@ function App() {
     <ThemeProvider>
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            {/* Auth Routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+          <PreferencesProvider>
+            <NotificationProvider>
+              <Routes>
+                {/* Auth Routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
 
-            {/* Default Route -> Point to Register per requirements */}
-            <Route path="/" element={<Navigate to="/register" replace />} />
+                {/* Default Route -> Point to Register per requirements */}
+                <Route path="/" element={<Navigate to="/register" replace />} />
 
-            {/* Protected Routes (Logged-in users) */}
-            <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
-            <Route path="/requests" element={<ProtectedRoute><Layout><Requests /></Layout></ProtectedRoute>} />
-            <Route path="/create" element={<ProtectedRoute><Layout><CreateTicket /></Layout></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
+                {/* Protected Routes (Logged-in users) */}
+                <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+                <Route path="/requests" element={<ProtectedRoute><Layout><Requests /></Layout></ProtectedRoute>} />
+                <Route path="/create" element={<ProtectedRoute><Layout><CreateTicket /></Layout></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
 
-            {/* Admin Routes */}
-            <Route path="/admin" element={<AdminRoute><Layout><AdminPanel /></Layout></AdminRoute>} />
-          </Routes>
+                {/* Admin Routes */}
+                <Route path="/admin" element={<AdminRoute><Layout><AdminPanel /></Layout></AdminRoute>} />
+              </Routes>
+            </NotificationProvider>
+          </PreferencesProvider>
         </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>

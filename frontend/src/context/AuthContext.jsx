@@ -42,12 +42,16 @@ export function AuthProvider({ children }) {
         navigate('/login');
     };
 
+    const updateUser = (updates) => {
+        setUser((currentUser) => currentUser ? { ...currentUser, ...updates } : currentUser);
+    };
+
     if (loading) {
         return <div className="h-screen w-full flex items-center justify-center">Loading context...</div>;
     }
 
     return (
-        <AuthContext.Provider value={{ user, token, login, logout }}>
+        <AuthContext.Provider value={{ user, token, login, logout, updateUser }}>
             {children}
         </AuthContext.Provider>
     );

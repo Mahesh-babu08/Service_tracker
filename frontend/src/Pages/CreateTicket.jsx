@@ -6,14 +6,15 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Input } from '../Components/ui/Input';
 import { Button } from '../Components/ui/Button';
 import api from '../Services/api';
-import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../hooks/useNotification';
 
 export default function CreateTicket() {
   const [formData, setFormData] = useState({ title: '', description: '', departmentId: '' });
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
+  const { showNotification } = useNotification();
 
   useEffect(() => {
     const fetchDepartments = async () => {
@@ -42,18 +43,18 @@ export default function CreateTicket() {
 
   const handleSubmit = async () => {
     if (!formData.title || !formData.description || !formData.departmentId) {
-      toast.error('Title, description, and department are required.');
+      showNotification('Title, description, and department are required.', 'error');
       return;
     }
 
     setLoading(true);
     try {
       await api.post('/tickets', formData);
-      toast.success('Request submitted successfully!');
-      navigate('/requests');
+      showNotification('Request submitted successfully!', 'success', 'Ticket Created');
+      navigate('/dashboard');
     } catch (err) {
       console.error(err);
-      toast.error('Failed to submit request.');
+      showNotification('Failed to submit request.', 'error');
     } finally {
       setLoading(false);
     }

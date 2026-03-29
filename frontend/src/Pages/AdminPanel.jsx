@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Edit2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../Components/ui/Card';
@@ -6,7 +6,9 @@ import { Badge } from '../Components/ui/Badge';
 import { Button } from '../Components/ui/Button';
 import { Loader } from '../Components/ui/Loader';
 import api from '../Services/api';
-import toast from 'react-hot-toast';
+import { useNotifications } from '../context/NotificationContext';
+import { usePreferences } from '../context/PreferencesContext';
+import { getLocaleForLanguage } from '../utils/preferences';
 
 const getStatusBadge = (status) => {
     if (!status) return <Badge>Unknown</Badge>;
@@ -34,6 +36,16 @@ export default function AdminPanel() {
     const [newDeptName, setNewDeptName] = useState('');
     const [loadingDepts, setLoadingDepts] = useState(true);
 
+    const [selectedDepartment, setSelectedDepartment] = useState(null);
+    const [departmentTickets, setDepartmentTickets] = useState([]);
+    const [loadingDeptTickets, setLoadingDeptTickets] = useState(false);
+
+    const { addNotification } = useNotifications();
+    const { preferences } = usePreferences();
+    const locale = getLocaleForLanguage(preferences.language);
+
+    const departmentTicketsRef = useRef(null);
+
     const fetchDepartments = async () => {
         setLoadingDepts(true);
         try {
@@ -41,9 +53,22 @@ export default function AdminPanel() {
             setDepartments(res.data);
         } catch (err) {
             console.error(err);
-            toast.error('Failed to load departments');
+            addNotification('Failed to load departments', 'error');
         } finally {
             setLoadingDepts(false);
+        }
+    };
+
+    const fetchDepartmentTickets = async (departmentId) => {
+        setLoadingDeptTickets(true);
+        try {
+            const res = await api.get(`/admin/tickets/department/${departmentId}`);
+            setDepartmentTickets(res.data);
+        } catch (err) {
+            console.error(err);
+            addNotification('Failed to load department tickets', 'error');
+        } finally {
+            setLoadingDeptTickets(false);
         }
     };
 
@@ -63,7 +88,7 @@ export default function AdminPanel() {
             }
         } catch (err) {
             console.error(err);
-            toast.error('Failed to load tickets');
+            addNotification('Failed to load tickets', 'error');
         } finally {
             setLoading(false);
         }
@@ -76,53 +101,71 @@ export default function AdminPanel() {
 
     const handleCreateDepartment = async () => {
         if (!newDeptName.trim()) {
-            toast.error('Please enter a department name');
+            addNotification('Please enter a department name', 'error');
             return;
         }
         try {
             await api.post('/departments', { name: newDeptName });
-            toast.success('Department created');
+            addNotification('Department created successfully', 'success', 'Department Added');
             setNewDeptName('');
             fetchDepartments();
         } catch (err) {
-            toast.error('Failed to create department');
+            addNotification('Failed to create department', 'error');
         }
     };
 
     const handleStatusChange = async (ticketId, selectedStatus) => {
         try {
             await api.put(`/admin/tickets/status/${ticketId}?status=${selectedStatus}`);
-            toast.success('Status updated successfully');
+            addNotification(`Ticket status updated to ${selectedStatus}`, 'success', 'Status Changed');
             fetchTickets(page);
         } catch (err) {
-            toast.error('Failed to update status');
+            addNotification('Failed to update status', 'error');
         }
     };
 
     const handlePriorityChange = async (ticketId, selectedPriority) => {
         try {
             await api.put(`/admin/tickets/priority/${ticketId}?priority=${selectedPriority}`);
-            toast.success('Priority updated successfully');
+            addNotification(`Ticket priority updated to ${selectedPriority}`, 'success', 'Priority Changed');
             fetchTickets(page);
         } catch (err) {
-            toast.error('Failed to update priority');
+            addNotification('Failed to update priority', 'error');
         }
     };
 
     const handleAssign = async (ticketId) => {
         if (!departmentIdInput.trim()) {
-            toast.error('Please enter a Department ID');
+            addNotification('Please enter a department ID.', 'error');
             return;
         }
+
         try {
             await api.put(`/admin/tickets/assign-department/${ticketId}/${departmentIdInput}`);
-            toast.success('Department assigned successfully');
+            addNotification('Department assigned successfully.', 'success', 'Department Assigned');
             setAssigningId(null);
             setDepartmentIdInput('');
             fetchTickets(page);
+            if (selectedDepartment) {
+                fetchDepartmentTickets(selectedDepartment.id);
+            }
         } catch (err) {
-            toast.error('Failed to assign department');
+            addNotification('Failed to assign department.', 'error');
         }
+    };
+
+    const handleDepartmentClick = async (dept) => {
+        setSelectedDepartment(dept);
+        await fetchDepartmentTickets(dept.id);
+        // Scroll to the department tickets section after loading
+        setTimeout(() => {
+            if (departmentTicketsRef.current) {
+                departmentTicketsRef.current.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        }, 100); // Small delay to ensure the section is rendered
     };
 
     return (
@@ -249,9 +292,18 @@ export default function AdminPanel() {
                                 ) : (
                                     <ul className="space-y-2">
                                         {departments.length > 0 ? departments.map(dept => (
-                                            <li key={dept.id} className="p-3 bg-muted/30 rounded-lg border border-border flex justify-between items-center">
-                                                <span className="font-medium">{dept.name}</span>
-                                                <span className="text-xs text-foreground/50">ID: {dept.id}</span>
+                                            <li key={dept.id}>
+                                                <button
+                                                    onClick={() => handleDepartmentClick(dept)}
+                                                    className={`w-full p-3 rounded-lg border text-left transition-colors ${
+                                                        selectedDepartment?.id === dept.id
+                                                            ? 'bg-primary/10 border-primary text-primary'
+                                                            : 'bg-muted/30 border-border hover:bg-muted/50'
+                                                    }`}
+                                                >
+                                                    <div className="font-medium">{dept.name}</div>
+                                                    <div className="text-xs text-foreground/50">ID: {dept.id}</div>
+                                                </button>
                                             </li>
                                         )) : (
                                             <li className="text-foreground/50 text-sm">No departments found.</li>
@@ -278,6 +330,57 @@ export default function AdminPanel() {
                     </CardContent>
                 </Card>
             </motion.div>
+
+            {selectedDepartment && (
+                <motion.div ref={departmentTicketsRef} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.2 }}>
+                    <Card className="border-border/50 shadow-soft overflow-hidden">
+                        <CardHeader className="border-b border-border/50 bg-muted/10 pb-4">
+                            <CardTitle>Tickets for {selectedDepartment.name}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            {loadingDeptTickets ? (
+                                <div className="py-12"><Loader /></div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="text-xs text-foreground/60 uppercase bg-muted/30">
+                                            <tr>
+                                                <th className="px-6 py-4 font-medium">Ticket</th>
+                                                <th className="px-6 py-4 font-medium">Status</th>
+                                                <th className="px-6 py-4 font-medium">Priority</th>
+                                                <th className="px-6 py-4 font-medium">Created</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border/50">
+                                            {departmentTickets.length > 0 ? departmentTickets.map((ticket) => (
+                                                <tr key={ticket.id} className="hover:bg-muted/30 transition-colors">
+                                                    <td className="px-6 py-4">
+                                                        <div className="font-medium text-foreground">{ticket.title}</div>
+                                                        <div className="text-xs text-foreground/50 mt-1 uppercase tracking-wider">#{ticket.id}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        {getStatusBadge(ticket.status)}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <Badge variant={ticket.priority === 'CRITICAL' ? 'destructive' : ticket.priority === 'HIGH' ? 'secondary' : 'outline'}>
+                                                            {ticket.priority}
+                                                        </Badge>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-foreground/70">
+                                                        {new Date(ticket.createdAt).toLocaleDateString(locale)}
+                                                    </td>
+                                                </tr>
+                                            )) : (
+                                                <tr><td colSpan="4" className="text-center py-8 text-foreground/50">No tickets found for this department.</td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </motion.div>
+            )}
         </div>
     );
 }
