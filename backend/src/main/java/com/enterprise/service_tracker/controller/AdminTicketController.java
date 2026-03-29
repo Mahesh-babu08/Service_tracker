@@ -1,58 +1,29 @@
 package com.enterprise.service_tracker.controller;
 
-import org.springframework.web.bind.annotation.*;
-import org.springframework.data.domain.Page;
-import org.springframework.http.ResponseEntity;
-
-import java.util.Map;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.enterprise.service_tracker.entity.Ticket;
-import com.enterprise.service_tracker.service.TicketService;
 import com.enterprise.service_tracker.enums.Priority;
 import com.enterprise.service_tracker.enums.Status;
+import com.enterprise.service_tracker.service.TicketService;
 
 @RestController
-@RequestMapping("/api/tickets")
-public class TicketController {
+@RequestMapping("/api/admin/tickets")
+public class AdminTicketController {
 
     private final TicketService ticketService;
 
-    public TicketController(TicketService ticketService) {
+    public AdminTicketController(TicketService ticketService) {
         this.ticketService = ticketService;
-    }
-
-    @PostMapping
-    public ResponseEntity<?> createTicket(@RequestBody Map<String, String> request, java.security.Principal principal) {
-        try {
-            String email = principal.getName();
-            Long departmentId = null;
-            
-            if (request.containsKey("departmentId") && request.get("departmentId") != null && !request.get("departmentId").toString().isEmpty()) {
-                departmentId = Long.parseLong(request.get("departmentId"));
-            }
-
-            Ticket ticket = ticketService.createTicket(
-                    request.get("title"),
-                    request.get("description"),
-                    email,
-                    departmentId
-            );
-
-            return ResponseEntity.ok(ticket);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Ticket>> getUserTickets(@PathVariable Long userId) {
-        return ResponseEntity.ok(ticketService.getUserTickets(userId));
-    }
-
-    @GetMapping("/my")
-    public ResponseEntity<List<Ticket>> getMyTickets(java.security.Principal principal) {
-        return ResponseEntity.ok(ticketService.getUserTicketsByEmail(principal.getName()));
     }
 
     @GetMapping
@@ -60,10 +31,10 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.getAllTickets());
     }
 
-    @PutMapping("/assign/{ticketId}/{staffId}")
-    public ResponseEntity<Ticket> assignTicket(@PathVariable Long ticketId,
-                                               @PathVariable Long staffId) {
-        return ResponseEntity.ok(ticketService.assignTicket(ticketId, staffId));
+    @PutMapping("/assign-department/{ticketId}/{departmentId}")
+    public ResponseEntity<Ticket> assignDepartment(@PathVariable Long ticketId,
+                                                   @PathVariable Long departmentId) {
+        return ResponseEntity.ok(ticketService.assignDepartment(ticketId, departmentId));
     }
 
     @PutMapping("/status/{ticketId}")
@@ -71,6 +42,13 @@ public class TicketController {
                                                @RequestParam Status status) {
         return ResponseEntity.ok(ticketService.updateStatus(ticketId, status));
     }
+
+    @PutMapping("/priority/{ticketId}")
+    public ResponseEntity<Ticket> updatePriority(@PathVariable Long ticketId,
+                                                 @RequestParam Priority priority) {
+        return ResponseEntity.ok(ticketService.updatePriority(ticketId, priority));
+    }
+
     @GetMapping("/paginated")
     public ResponseEntity<Page<Ticket>> getPaginatedTickets(
             @RequestParam(defaultValue = "0") int page,
@@ -82,6 +60,7 @@ public class TicketController {
                 ticketService.getTicketsWithPagination(page, size, sortBy, direction)
         );
     }
+
     @GetMapping("/filter/status")
     public ResponseEntity<Page<Ticket>> filterByStatus(
             @RequestParam Status status,
@@ -92,6 +71,7 @@ public class TicketController {
                 ticketService.filterByStatus(status, page, size)
         );
     }
+
     @GetMapping("/filter/priority")
     public ResponseEntity<Page<Ticket>> filterByPriority(
             @RequestParam Priority priority,
@@ -102,6 +82,7 @@ public class TicketController {
                 ticketService.filterByPriority(priority, page, size)
         );
     }
+
     @GetMapping("/search")
     public ResponseEntity<Page<Ticket>> searchByTitle(
             @RequestParam String keyword,
@@ -111,5 +92,9 @@ public class TicketController {
         return ResponseEntity.ok(
                 ticketService.searchByTitle(keyword, page, size)
         );
+    }
+    @GetMapping("/department/{departmentId}")
+    public ResponseEntity<List<Ticket>> getByDepartment(@PathVariable Long departmentId) {
+        return ResponseEntity.ok(ticketService.getTicketsByDepartment(departmentId));
     }
 }

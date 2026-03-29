@@ -6,26 +6,29 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+
 import com.enterprise.service_tracker.util.JwtUtil;
+
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
+
 import java.io.IOException;
+import java.util.List;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
-    private final CustomUserDetailsServices userDetailsService;
 
-    public JwtFilter(JwtUtil jwtUtil, CustomUserDetailsServices userDetailsService) {
+    public JwtFilter(JwtUtil jwtUtil) {
         this.jwtUtil = jwtUtil;
-        this.userDetailsService = userDetailsService;
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain chain)
+                                   HttpServletResponse response,
+                                   FilterChain chain)
             throws ServletException, IOException {
 
         String header = request.getHeader("Authorization");
@@ -35,15 +38,22 @@ public class JwtFilter extends OncePerRequestFilter {
 
             try {
                 String email = jwtUtil.extractUsername(token);
+                String role = jwtUtil.extractRole(token); // ✅ CRITICAL
 
                 if (email != null &&
                         SecurityContextHolder.getContext().getAuthentication() == null) {
-                    var userDetails = userDetailsService.loadUserByUsername(email);
-                    var auth = new UsernamePasswordAuthenticationToken(
-                            userDetails,
-                            null,
-                            userDetails.getAuthorities()
-                    );
+
+                    // ✅ convert role → ROLE_ADMIN / ROLE_USER
+                    SimpleGrantedAuthority authority =
+                            new SimpleGrantedAuthority("ROLE_" + role);
+
+                    UsernamePasswordAuthenticationToken auth =
+                            new UsernamePasswordAuthenticationToken(
+                                    email,
+                                    null,
+                                    List.of(authority)
+                            );
+
                     SecurityContextHolder.getContext().setAuthentication(auth);
                 }
 

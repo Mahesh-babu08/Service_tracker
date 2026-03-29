@@ -3,7 +3,8 @@ package com.enterprise.service_tracker.controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import com.enterprise.service_tracker.dto.RegisterRequest;
+
+import com.enterprise.service_tracker.dto.*;
 import com.enterprise.service_tracker.service.AuthService;
 
 import jakarta.validation.Valid;
@@ -20,8 +21,11 @@ public class AuthController {
         this.authService = authService;
     }
 
+    // =========================
+    // REGISTER
+    // =========================
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
         try {
             return ResponseEntity.ok(authService.register(request));
         } catch (RuntimeException e) {
@@ -30,14 +34,17 @@ public class AuthController {
         }
     }
 
+    // =========================
+    // LOGIN (USER + ADMIN)
+    // =========================
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
-
-        String token = authService.login(
-                request.get("email"),
-                request.get("password")
-        );
-
-        return ResponseEntity.ok(Map.of("token", token));
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+        try {
+            AuthResponse response = authService.login(request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 }

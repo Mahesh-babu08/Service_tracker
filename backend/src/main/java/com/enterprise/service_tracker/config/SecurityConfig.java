@@ -9,10 +9,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.cors.*;
+
 import com.enterprise.service_tracker.security.JwtFilter;
+
 import java.util.List;
 
 @Configuration
@@ -35,15 +35,27 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
             .authorizeHttpRequests(auth -> auth
+                // ✅ ALLOW PREFLIGHT CORS REQUESTS
+                .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+
                 .requestMatchers("/api/auth/**").permitAll()
+
+                // ✅ ADMIN ONLY
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/tickets/**").authenticated()
+
+                // ✅ USER ONLY
+                .requestMatchers("/api/user/**").hasRole("USER")
+
+                // ✅ everything else requires login
                 .anyRequest().authenticated()
             )
+
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
+
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -52,12 +64,15 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        // 🔥 ULTIMATE CORS FIX: Echoes exact origin dynamically, bypassing 127.0.0.1 vs localhost mismatches!
+        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedMethods(List.of("*"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);  // ✅ correct method name
+        source.registerCorsConfiguration("/**", config);
+
         return source;
     }
 }

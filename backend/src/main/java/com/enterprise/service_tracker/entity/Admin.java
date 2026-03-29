@@ -2,12 +2,10 @@ package com.enterprise.service_tracker.entity;
 
 import jakarta.persistence.*;
 import com.enterprise.service_tracker.enums.Role;
-import java.util.List;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
-@Table(name = "users")
-public class User {
+@Table(name = "admins")
+public class Admin {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,12 +19,7 @@ public class User {
     private String password;
 
     @Enumerated(EnumType.STRING)
-    private Role role = Role.USER;   // ✅ default role
-
-    // ✅ NEW: Relationship with tickets
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    @JsonIgnore
-    private List<Ticket> tickets;
+    private Role role = Role.ADMIN; // ✅ already correct
 
     // ===== Getters and Setters =====
 
@@ -38,12 +31,12 @@ public class User {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getEmail() {
@@ -68,13 +61,5 @@ public class User {
 
     public void setRole(Role role) {
         this.role = role;
-    }
-
-    public List<Ticket> getTickets() {
-        return tickets;
-    }
-
-    public void setTickets(List<Ticket> tickets) {
-        this.tickets = tickets;
     }
 }

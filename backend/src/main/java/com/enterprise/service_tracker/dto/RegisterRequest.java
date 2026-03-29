@@ -14,7 +14,9 @@ public class RegisterRequest {
     @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
 
-    private String role; // USER / ADMIN
+    @NotBlank(message = "Role is required")
+    @Pattern(regexp = "USER|ADMIN", message = "Role must be USER or ADMIN")
+    private String role;
 
     // getters & setters
     public String getName() { return name; }

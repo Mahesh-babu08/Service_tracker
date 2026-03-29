@@ -1,10 +1,20 @@
 package com.enterprise.service_tracker.entity;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 import com.enterprise.service_tracker.enums.Priority;
 import com.enterprise.service_tracker.enums.Status;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "tickets")
@@ -20,23 +30,29 @@ public class Ticket {
     private String description;
 
     @Enumerated(EnumType.STRING)
+    @Column(length = 20)
     private Status status = Status.OPEN;
 
     @Enumerated(EnumType.STRING)
+    @Column(length = 20)
     private Priority priority = Priority.MEDIUM;
 
+    // ✅ Ticket owner (VERY IMPORTANT for your requirement)
     @ManyToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    // ✅ Admin assigns ticket (optional)
     @ManyToOne
     @JoinColumn(name = "assigned_to")
     private User assignedTo;
 
+    // ✅ Department (already good)
     @ManyToOne
-    @JoinColumn(name = "department_id")
+    @JoinColumn(name = "department_id", nullable = false)
     private Department department;
 
+    // ✅ Auto timestamp
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public Ticket() {}
@@ -51,31 +67,41 @@ public class Ticket {
         this.createdAt = LocalDateTime.now();
     }
 
-    // Getters & Setters
+    // ===== Getters & Setters =====
+
     public Long getId() { return id; }
+
     public void setId(Long id) { this.id = id; }
 
     public String getTitle() { return title; }
+
     public void setTitle(String title) { this.title = title; }
 
     public String getDescription() { return description; }
+
     public void setDescription(String description) { this.description = description; }
 
     public Status getStatus() { return status; }
+
     public void setStatus(Status status) { this.status = status; }
 
     public Priority getPriority() { return priority; }
+
     public void setPriority(Priority priority) { this.priority = priority; }
 
     public User getUser() { return user; }
+
     public void setUser(User user) { this.user = user; }
 
     public User getAssignedTo() { return assignedTo; }
+
     public void setAssignedTo(User assignedTo) { this.assignedTo = assignedTo; }
 
     public Department getDepartment() { return department; }
+
     public void setDepartment(Department department) { this.department = department; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
+
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }
