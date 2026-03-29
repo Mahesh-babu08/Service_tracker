@@ -8,6 +8,7 @@ import { Button } from '../Components/ui/Button';
 import api from '../Services/api';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function CreateTicket() {
   const [formData, setFormData] = useState({ title: '', description: '', departmentId: '' });
@@ -26,10 +27,22 @@ export default function CreateTicket() {
     fetchDepartments();
   }, []);
   const navigate = useNavigate();
+  const { user } = useAuth(); // Import from context
+
+  if (user?.role === 'ADMIN') {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center h-full">
+        <h2 className="text-2xl font-bold text-foreground">Admin Access Restricted</h2>
+        <p className="text-foreground/70 mt-2 max-w-md">
+          Administrator accounts are strictly designated for managing operations and do not support creating native personal user service requests. Please log in as a generic User to submit tickets.
+        </p>
+      </div>
+    );
+  }
 
   const handleSubmit = async () => {
-    if (!formData.title || !formData.description) {
-      toast.error('Title and description are required.');
+    if (!formData.title || !formData.description || !formData.departmentId) {
+      toast.error('Title, description, and department are required.');
       return;
     }
 
@@ -77,7 +90,7 @@ export default function CreateTicket() {
                   value={formData.departmentId}
                   onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
                 >
-                  <option value="">Select a department (optional)</option>
+                  <option value="">Select a department</option>
                   {departments.map((dept) => (
                     <option key={dept.id} value={dept.id}>{dept.name}</option>
                   ))}

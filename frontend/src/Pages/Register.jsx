@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight } from 'lucide-react';
 import API from '../Services/api';
+import toast from 'react-hot-toast';
 
 export default function Register() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: "USER" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -14,6 +15,7 @@ export default function Register() {
     setError('');
 
     if (!formData.name || !formData.email || !formData.password) {
+      alert('Please fill all fields');
       setError('Please fill all fields');
       return;
     }
@@ -27,9 +29,13 @@ export default function Register() {
       }
     } catch (err) {
       if (err.response?.status === 409) {
-        setError('This email is already registered. Please log in instead.');
+        const msg = 'This email is already registered. Please log in instead.';
+        setError(msg);
+        alert(msg);
       } else {
-        setError(err.response?.data?.error || err.response?.data?.message || 'Registration failed. Please try again.');
+        const msg = err.response?.data?.error || err.response?.data?.message || 'Registration failed. Please try again.';
+        setError(msg);
+        alert(msg);
       }
     } finally {
       setLoading(false);
@@ -88,6 +94,21 @@ export default function Register() {
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               />
+            </div>
+          </div>
+
+          <div className="space-y-1 text-left">
+            <label className="text-sm font-medium text-foreground">Account Type</label>
+            <div className="relative">
+              <User className="absolute left-3 top-2.5 h-5 w-5 text-foreground/50" />
+              <select
+                className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-colors appearance-none"
+                value={formData.role}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+              >
+                <option value="USER">Register as User</option>
+                <option value="ADMIN">Register as Admin</option>
+              </select>
             </div>
           </div>
 

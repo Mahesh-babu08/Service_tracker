@@ -68,14 +68,14 @@ export default function Dashboard() {
             inProgress: inProgress,
             statusSummary: { PENDING: pending, RESOLVED: resolved, IN_PROGRESS: inProgress }
           });
-          setRecentRequests(ticketsArray.slice(0, 5));
+          setRecentRequests(Array.isArray(ticketsArray) ? ticketsArray.slice(0, 5) : []);
         } else {
           setDashboardData(rawData);
           try {
             const endpoint = user?.role === 'ADMIN' ? '/tickets/paginated?page=0&size=5' : '/tickets/my';
             const tktRes = await api.get(endpoint);
             const ticketsArray = tktRes.data?.content || tktRes.data;
-            setRecentRequests(ticketsArray.slice(0, 5));
+            setRecentRequests(Array.isArray(ticketsArray) ? ticketsArray.slice(0, 5) : []);
           } catch (e) {
             console.error("Could not fetch recent requests", e);
           }
@@ -147,15 +147,15 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/50">
-                    {recentRequests.length > 0 ? recentRequests.map((req, i) => (
+                    {Array.isArray(recentRequests) && recentRequests.length > 0 ? recentRequests.map((req, i) => (
                       <motion.tr key={req.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + (i * 0.05) }} className="hover:bg-muted/30 transition-colors">
                         <td className="px-6 py-4">
-                          <div className="font-medium text-foreground">{req.title}</div>
-                          <div className="text-xs text-foreground/50 mt-1 uppercase tracking-wider">#{req.id}</div>
+                          <div className="font-medium text-foreground">{req.title || 'Untitled Request'}</div>
+                          <div className="text-xs text-foreground/50 mt-1 uppercase tracking-wider">#{req.id || 'N/A'}</div>
                         </td>
                         <td className="px-6 py-4">{getStatusBadge(req.status)}</td>
                         <td className="px-6 py-4"><span className={`font-medium ${getPriorityColor(req.priority)}`}>{req.priority || 'N/A'}</span></td>
-                        <td className="px-6 py-4 text-foreground/50">{new Date(req.createdAt || req.date || new Date()).toLocaleDateString()}</td>
+                        <td className="px-6 py-4 text-foreground/50">{req.createdAt || req.date ? new Date(req.createdAt || req.date).toLocaleDateString() : 'N/A'}</td>
                       </motion.tr>
                     )) : <tr><td colSpan="4" className="text-center py-6 text-foreground/50">No recent requests</td></tr>}
                   </tbody>

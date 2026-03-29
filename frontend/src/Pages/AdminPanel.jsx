@@ -28,7 +28,7 @@ export default function AdminPanel() {
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
     const [assigningId, setAssigningId] = useState(null);
-    const [staffIdInput, setStaffIdInput] = useState('');
+    const [departmentIdInput, setDepartmentIdInput] = useState('');
 
     const [departments, setDepartments] = useState([]);
     const [newDeptName, setNewDeptName] = useState('');
@@ -50,7 +50,7 @@ export default function AdminPanel() {
     const fetchTickets = async (pageNumber = 0) => {
         setLoading(true);
         try {
-            const res = await api.get(`/tickets/paginated?page=${pageNumber}&size=10`);
+            const res = await api.get(`/admin/tickets/paginated?page=${pageNumber}&size=10`);
             if (res.data && res.data.content) {
                 setTickets(res.data.content);
                 setTotalPages(res.data.totalPages);
@@ -91,7 +91,7 @@ export default function AdminPanel() {
 
     const handleStatusChange = async (ticketId, selectedStatus) => {
         try {
-            await api.put(`/tickets/status/${ticketId}?status=${selectedStatus}`);
+            await api.put(`/admin/tickets/status/${ticketId}?status=${selectedStatus}`);
             toast.success('Status updated successfully');
             fetchTickets(page);
         } catch (err) {
@@ -99,19 +99,29 @@ export default function AdminPanel() {
         }
     };
 
+    const handlePriorityChange = async (ticketId, selectedPriority) => {
+        try {
+            await api.put(`/admin/tickets/priority/${ticketId}?priority=${selectedPriority}`);
+            toast.success('Priority updated successfully');
+            fetchTickets(page);
+        } catch (err) {
+            toast.error('Failed to update priority');
+        }
+    };
+
     const handleAssign = async (ticketId) => {
-        if (!staffIdInput.trim()) {
-            toast.error('Please enter a staff ID');
+        if (!departmentIdInput.trim()) {
+            toast.error('Please enter a Department ID');
             return;
         }
         try {
-            await api.put(`/tickets/assign/${ticketId}/${staffIdInput}`);
-            toast.success('Ticket assigned successfully');
+            await api.put(`/admin/tickets/assign-department/${ticketId}/${departmentIdInput}`);
+            toast.success('Department assigned successfully');
             setAssigningId(null);
-            setStaffIdInput('');
+            setDepartmentIdInput('');
             fetchTickets(page);
         } catch (err) {
-            toast.error('Failed to assign ticket');
+            toast.error('Failed to assign department');
         }
     };
 
@@ -138,7 +148,8 @@ export default function AdminPanel() {
                                             <th className="px-6 py-4 font-medium">Ticket</th>
                                             <th className="px-6 py-4 font-medium">Current Status</th>
                                             <th className="px-6 py-4 font-medium">Change Status</th>
-                                            <th className="px-6 py-4 font-medium">Assign To</th>
+                                            <th className="px-6 py-4 font-medium">Priority</th>
+                                            <th className="px-6 py-4 font-medium">Department</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/50">
@@ -163,35 +174,47 @@ export default function AdminPanel() {
                                                         <option value="CLOSED">CLOSED</option>
                                                     </select>
                                                 </td>
+                                                <td className="px-6 py-4 max-w-[150px]">
+                                                    <select
+                                                        className="bg-background border border-border text-sm rounded-lg focus:ring-primary focus:border-primary block w-full p-2"
+                                                        value={req.priority || 'MEDIUM'}
+                                                        onChange={(e) => handlePriorityChange(req.id, e.target.value)}
+                                                    >
+                                                        <option value="LOW">LOW</option>
+                                                        <option value="MEDIUM">MEDIUM</option>
+                                                        <option value="HIGH">HIGH</option>
+                                                        <option value="CRITICAL">CRITICAL</option>
+                                                    </select>
+                                                </td>
                                                 <td className="px-6 py-4">
                                                     {assigningId === req.id ? (
                                                         <div className="flex gap-2 items-center">
                                                             <input
                                                                 type="text"
-                                                                placeholder="Staff ID"
+                                                                placeholder="Department ID"
                                                                 className="bg-background border border-border text-sm rounded-lg p-2 w-24"
-                                                                value={staffIdInput}
-                                                                onChange={(e) => setStaffIdInput(e.target.value)}
+                                                                value={departmentIdInput}
+                                                                onChange={(e) => setDepartmentIdInput(e.target.value)}
                                                             />
                                                             <Button size="sm" onClick={() => handleAssign(req.id)}>Save</Button>
                                                             <Button size="sm" variant="ghost" onClick={() => setAssigningId(null)} className="bg-card hover:bg-muted text-foreground">Cancel</Button>
                                                         </div>
                                                     ) : (
                                                         <div className="flex items-center gap-2">
-                                                            {req.assignedTo || req.assignedStaff ? (
-                                                                <span className="text-sm font-medium">{req.assignedTo || req.assignedStaff}</span>
+                                                            {req.department ? (
+                                                                <span className="text-sm font-medium">{req.department.name}</span>
                                                             ) : (
-                                                                <span className="text-xs text-foreground/50 italic">Unassigned</span>
+                                                                <span className="text-xs text-foreground/50 italic">No Department</span>
                                                             )}
                                                             <Button size="sm" variant="outline" onClick={() => setAssigningId(req.id)} className="h-8 ml-auto border-border">
-                                                                <Edit2 size={14} className="mr-1" /> Assign
+                                                                <Edit2 size={14} className="mr-1" /> Assign Dept
                                                             </Button>
                                                         </div>
                                                     )}
                                                 </td>
                                             </tr>
                                         )) : (
-                                            <tr><td colSpan="4" className="text-center py-8 text-foreground/50">No tickets found.</td></tr>
+                                            <tr><td colSpan="5" className="text-center py-8 text-foreground/50">No tickets found.</td></tr>
                                         )}
                                     </tbody>
                                 </table>

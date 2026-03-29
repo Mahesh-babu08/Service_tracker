@@ -20,15 +20,17 @@ export default function Login() {
     setLoading(true);
     try {
       const res = await API.post('/auth/login', formData);
-      const token = res.data?.token || res.data?.jwt || res.data;
+      // 🔥 Critical Fix: Extract JWT from 'message' field since AuthResponse doesn't output 'token' natively
+      const token = res.data?.token || res.data?.jwt || res.data?.message || (typeof res.data === 'string' ? res.data : undefined);
+      
       if (token && typeof token === 'string') {
         login(token);
         navigate('/dashboard');
       } else {
-        alert('Invalid email or password');
+        alert('Malformed token response from server');
       }
     } catch (err) {
-      alert('Invalid email or password');
+      alert(err.response?.data?.error || err.response?.data?.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }
