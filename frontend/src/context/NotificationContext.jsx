@@ -1,70 +1,153 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import api from '../Services/api';
+import { useAuth } from './AuthContext';
 
 const NotificationContext = createContext(null);
+
+const normalizeNotification = (notification) => ({
+    ...notification,
+    isRead: notification?.isRead ?? notification?.read ?? false,
+    timestamp: notification?.createdAt ? new Date(notification.createdAt) : new Date(),
+    title: notification?.ticketTitle || 'Untitled Ticket',
+    type: notification?.actionType === 'DELETED' ? 'warning' : 'info',
+});
 
 export function NotificationProvider({ children }) {
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [loadingNotifications, setLoadingNotifications] = useState(false);
+    const { token, user } = useAuth();
 
-    const addNotification = (message, type = 'info', title = null) => {
-        const notification = {
-            id: Date.now() + Math.random(),
-            message,
-            title: title || getTitleFromType(type),
-            type,
-            timestamp: new Date(),
-            read: false
-        };
+    const updateNotificationState = useCallback((incomingNotifications) => {
+        const normalizedNotifications = Array.isArray(incomingNotifications)
+            ? incomingNotifications.map(normalizeNotification)
+            : [];
 
-        setNotifications(prev => [notification, ...prev]);
-        setUnreadCount(prev => prev + 1);
-    };
+        setNotifications(normalizedNotifications);
+        setUnreadCount(normalizedNotifications.filter((notification) => !notification.isRead).length);
+    }, []);
 
-    const markAsRead = (id) => {
-        setNotifications(prev =>
-            prev.map(notif =>
-                notif.id === id ? { ...notif, read: true } : notif
-            )
-        );
-        setUnreadCount(prev => Math.max(0, prev - 1));
-    };
+    const loadNotifications = useCallback(async ({ showLoader = true } = {}) => {
+        if (!token || !user?.email) {
+            updateNotificationState([]);
+            return [];
+        }
 
-    const markAllAsRead = () => {
-        setNotifications(prev =>
-            prev.map(notif => ({ ...notif, read: true }))
-        );
-        setUnreadCount(0);
-    };
+        if (showLoader) {
+            setLoadingNotifications(true);
+        }
 
-    const clearNotifications = () => {
+        try {
+            const response = await api.get('/notifications');
+            const loadedNotifications = Array.isArray(response.data) ? response.data : [];
+            updateNotificationState(loadedNotifications);
+            return loadedNotifications;
+        } catch (error) {
+            console.error('Failed to load notifications', error);
+            return [];
+        } finally {
+            if (showLoader) {
+                setLoadingNotifications(false);
+            }
+        }
+    }, [token, updateNotificationState, user?.email]);
+
+    const markAsRead = useCallback(async (id) => {
+        const targetNotification = notifications.find((notification) => notification.id === id);
+
+        if (!targetNotification || targetNotification.isRead) {
+            return;
+        }
+
+        try {
+            await api.put(`/notifications/${id}/read`);
+            setNotifications((prev) =>
+                prev.map((notification) =>
+                    notification.id === id ? { ...notification, isRead: true } : notification
+                )
+            );
+            setUnreadCount((prev) => Math.max(0, prev - 1));
+        } catch (error) {
+            console.error('Failed to mark notification as read', error);
+        }
+    }, [notifications]);
+
+    const markAllAsRead = useCallback(async () => {
+        const unreadNotifications = notifications.filter((notification) => !notification.isRead);
+
+        if (!unreadNotifications.length) {
+            return;
+        }
+
+        try {
+            await Promise.all(unreadNotifications.map((notification) => api.put(`/notifications/${notification.id}/read`)));
+            setNotifications((prev) =>
+                prev.map((notification) => ({ ...notification, isRead: true }))
+            );
+            setUnreadCount(0);
+        } catch (error) {
+            console.error('Failed to mark all notifications as read', error);
+            await loadNotifications({ showLoader: false });
+        }
+    }, [loadNotifications, notifications]);
+
+    const clearNotifications = useCallback(() => {
         setNotifications([]);
         setUnreadCount(0);
-    };
+    }, []);
 
-    const removeNotification = (id) => {
-        setNotifications(prev => {
-            const notification = prev.find(n => n.id === id);
-            if (notification && !notification.read) {
-                setUnreadCount(count => Math.max(0, count - 1));
-            }
-            return prev.filter(n => n.id !== id);
-        });
-    };
+    const deleteNotification = useCallback(async (id) => {
+        try {
+            await api.delete(`/notifications/${id}`);
+            setNotifications((prev) => {
+                const targetNotification = prev.find((notification) => notification.id === id);
+
+                if (targetNotification && !targetNotification.isRead) {
+                    setUnreadCount((count) => Math.max(0, count - 1));
+                }
+
+                return prev.filter((notification) => notification.id !== id);
+            });
+        } catch (error) {
+            console.error('Failed to delete notification', error);
+        }
+    }, []);
+
+    const deleteAllNotifications = useCallback(async () => {
+        try {
+            await api.delete('/notifications');
+            setNotifications([]);
+            setUnreadCount(0);
+        } catch (error) {
+            console.error('Failed to delete all notifications', error);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!token || !user?.email) {
+            clearNotifications();
+            return;
+        }
+
+        loadNotifications({ showLoader: false });
+    }, [clearNotifications, loadNotifications, token, user?.email]);
 
     return (
         <NotificationContext.Provider value={{
             notifications,
             unreadCount,
-            addNotification,
+            loadingNotifications,
+            loadNotifications,
             markAsRead,
             markAllAsRead,
-            clearNotifications,
-            removeNotification
+            deleteNotification,
+            deleteAllNotifications,
+            clearNotifications
         }}>
             {children}
         </NotificationContext.Provider>
     );
-};
+}
 
 export function useNotifications() {
     const context = useContext(NotificationContext);
@@ -72,14 +155,4 @@ export function useNotifications() {
         throw new Error('useNotifications must be used within a NotificationProvider');
     }
     return context;
-}
-
-function getTitleFromType(type) {
-    switch (type) {
-        case 'success': return 'Success';
-        case 'error': return 'Error';
-        case 'warning': return 'Warning';
-        case 'info':
-        default: return 'Information';
-    }
 }

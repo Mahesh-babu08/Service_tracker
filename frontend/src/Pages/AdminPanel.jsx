@@ -1,14 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Edit2 } from 'lucide-react';
+import { Edit2, Trash2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../Components/ui/Card';
 import { Badge } from '../Components/ui/Badge';
 import { Button } from '../Components/ui/Button';
 import { Loader } from '../Components/ui/Loader';
 import api from '../Services/api';
-import { useNotifications } from '../context/NotificationContext';
 import { usePreferences } from '../context/PreferencesContext';
+import { useNotification } from '../hooks/useNotification';
 import { getLocaleForLanguage } from '../utils/preferences';
+
+const PAGE_SIZE = 6;
 
 const getStatusBadge = (status) => {
     if (!status) return <Badge>Unknown</Badge>;
@@ -40,7 +42,7 @@ export default function AdminPanel() {
     const [departmentTickets, setDepartmentTickets] = useState([]);
     const [loadingDeptTickets, setLoadingDeptTickets] = useState(false);
 
-    const { addNotification } = useNotifications();
+    const { showNotification } = useNotification();
     const { preferences } = usePreferences();
     const locale = getLocaleForLanguage(preferences.language);
 
@@ -53,7 +55,7 @@ export default function AdminPanel() {
             setDepartments(res.data);
         } catch (err) {
             console.error(err);
-            addNotification('Failed to load departments', 'error');
+            showNotification('Failed to load departments', 'error');
         } finally {
             setLoadingDepts(false);
         }
@@ -66,7 +68,7 @@ export default function AdminPanel() {
             setDepartmentTickets(res.data);
         } catch (err) {
             console.error(err);
-            addNotification('Failed to load department tickets', 'error');
+            showNotification('Failed to load department tickets', 'error');
         } finally {
             setLoadingDeptTickets(false);
         }
@@ -75,20 +77,20 @@ export default function AdminPanel() {
     const fetchTickets = async (pageNumber = 0) => {
         setLoading(true);
         try {
-            const res = await api.get(`/admin/tickets/paginated?page=${pageNumber}&size=10`);
+            const res = await api.get(`/admin/tickets/paginated?page=${pageNumber}&size=${PAGE_SIZE}`);
             if (res.data && res.data.content) {
                 setTickets(res.data.content);
                 setTotalPages(res.data.totalPages);
                 setPage(res.data.number || pageNumber);
             } else {
                 const allData = Array.isArray(res.data) ? res.data : [];
-                setTickets(allData.slice(pageNumber * 10, (pageNumber + 1) * 10));
-                setTotalPages(Math.ceil(allData.length / 10));
+                setTickets(allData.slice(pageNumber * PAGE_SIZE, (pageNumber + 1) * PAGE_SIZE));
+                setTotalPages(Math.ceil(allData.length / PAGE_SIZE));
                 setPage(pageNumber);
             }
         } catch (err) {
             console.error(err);
-            addNotification('Failed to load tickets', 'error');
+            showNotification('Failed to load tickets', 'error');
         } finally {
             setLoading(false);
         }
@@ -101,48 +103,48 @@ export default function AdminPanel() {
 
     const handleCreateDepartment = async () => {
         if (!newDeptName.trim()) {
-            addNotification('Please enter a department name', 'error');
+            showNotification('Please enter a department name', 'error');
             return;
         }
         try {
             await api.post('/departments', { name: newDeptName });
-            addNotification('Department created successfully', 'success', 'Department Added');
+            showNotification('Department created successfully', 'success', 'Department Added');
             setNewDeptName('');
             fetchDepartments();
         } catch (err) {
-            addNotification('Failed to create department', 'error');
+            showNotification('Failed to create department', 'error');
         }
     };
 
     const handleStatusChange = async (ticketId, selectedStatus) => {
         try {
             await api.put(`/admin/tickets/status/${ticketId}?status=${selectedStatus}`);
-            addNotification(`Ticket status updated to ${selectedStatus}`, 'success', 'Status Changed');
+            showNotification(`Ticket status updated to ${selectedStatus}`, 'success', 'Status Changed');
             fetchTickets(page);
         } catch (err) {
-            addNotification('Failed to update status', 'error');
+            showNotification('Failed to update status', 'error');
         }
     };
 
     const handlePriorityChange = async (ticketId, selectedPriority) => {
         try {
             await api.put(`/admin/tickets/priority/${ticketId}?priority=${selectedPriority}`);
-            addNotification(`Ticket priority updated to ${selectedPriority}`, 'success', 'Priority Changed');
+            showNotification(`Ticket priority updated to ${selectedPriority}`, 'success', 'Priority Changed');
             fetchTickets(page);
         } catch (err) {
-            addNotification('Failed to update priority', 'error');
+            showNotification('Failed to update priority', 'error');
         }
     };
 
     const handleAssign = async (ticketId) => {
         if (!departmentIdInput.trim()) {
-            addNotification('Please enter a department ID.', 'error');
+            showNotification('Please enter a department ID.', 'error');
             return;
         }
 
         try {
             await api.put(`/admin/tickets/assign-department/${ticketId}/${departmentIdInput}`);
-            addNotification('Department assigned successfully.', 'success', 'Department Assigned');
+            showNotification('Department assigned successfully.', 'success', 'Department Assigned');
             setAssigningId(null);
             setDepartmentIdInput('');
             fetchTickets(page);
@@ -150,7 +152,36 @@ export default function AdminPanel() {
                 fetchDepartmentTickets(selectedDepartment.id);
             }
         } catch (err) {
-            addNotification('Failed to assign department.', 'error');
+            showNotification('Failed to assign department.', 'error');
+        }
+    };
+
+    const handleDeleteTicket = async (ticketId) => {
+        const confirmed = window.confirm('Are you sure you want to delete this ticket? This action cannot be undone.');
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            await api.delete(`/tickets/${ticketId}`);
+            showNotification('Ticket deleted successfully', 'success', 'Ticket Deleted');
+
+            // Update both admin views locally so the delete feels instant.
+            setTickets((currentTickets) => {
+                const updatedTickets = currentTickets.filter((ticket) => ticket.id !== ticketId);
+                if (updatedTickets.length === 0 && page > 0) {
+                    setTimeout(() => fetchTickets(page - 1), 0);
+                }
+                return updatedTickets;
+            });
+            setDepartmentTickets((currentTickets) => currentTickets.filter((ticket) => ticket.id !== ticketId));
+
+            if (assigningId === ticketId) {
+                setAssigningId(null);
+                setDepartmentIdInput('');
+            }
+        } catch (err) {
+            showNotification(err.response?.data?.error || 'Failed to delete ticket.', 'error');
         }
     };
 
@@ -193,6 +224,7 @@ export default function AdminPanel() {
                                             <th className="px-6 py-4 font-medium">Change Status</th>
                                             <th className="px-6 py-4 font-medium">Priority</th>
                                             <th className="px-6 py-4 font-medium">Department</th>
+                                            <th className="px-6 py-4 font-medium">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/50">
@@ -201,6 +233,12 @@ export default function AdminPanel() {
                                                 <td className="px-6 py-4">
                                                     <div className="font-medium text-foreground">{req.title}</div>
                                                     <div className="text-xs text-foreground/50 mt-1 uppercase tracking-wider">#{req.id}</div>
+                                                    {req.deletedByUser && (
+                                                        // Admins can still see user-soft-deleted tickets for audit context.
+                                                        <div className="mt-2 text-xs font-medium text-destructive">
+                                                            This ticket was deleted by the user
+                                                        </div>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     {getStatusBadge(req.status)}
@@ -255,9 +293,19 @@ export default function AdminPanel() {
                                                         </div>
                                                     )}
                                                 </td>
+                                                <td className="px-6 py-4">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="destructive"
+                                                        onClick={() => handleDeleteTicket(req.id)}
+                                                        className="h-8"
+                                                    >
+                                                        <Trash2 size={14} className="mr-1" /> Delete
+                                                    </Button>
+                                                </td>
                                             </tr>
                                         )) : (
-                                            <tr><td colSpan="5" className="text-center py-8 text-foreground/50">No tickets found.</td></tr>
+                                            <tr><td colSpan="6" className="text-center py-8 text-foreground/50">No tickets found.</td></tr>
                                         )}
                                     </tbody>
                                 </table>

@@ -6,6 +6,7 @@ import { Badge } from '../Components/ui/Badge';
 import { Loader } from '../Components/ui/Loader';
 import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
+import { useNavigate } from 'react-router-dom';
 import api from '../Services/api';
 import { getLocaleForLanguage } from '../utils/preferences';
 import toast from 'react-hot-toast';
@@ -42,48 +43,16 @@ export default function Dashboard() {
   const [dashboardData, setDashboardData] = useState(null);
   const [recentRequests, setRecentRequests] = useState([]);
   const locale = getLocaleForLanguage(preferences.language);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchDashboard = async () => {
+      setLoading(true);
+
       try {
-        let statsRes;
-        if (user?.role === 'ADMIN') {
-          try {
-            statsRes = await api.get('/admin/reports/dashboard');      // ✅
-          } catch {
-            statsRes = await api.get('/tickets');                      // ✅
-          }
-        } else {
-          statsRes = await api.get('/tickets/my');                        // ✅
-        }
-
-        const rawData = statsRes.data;
-        if (Array.isArray(rawData) || (rawData.content && Array.isArray(rawData.content))) {
-          const ticketsArray = rawData.content || rawData;
-          const total = ticketsArray.length;
-          const pending = ticketsArray.filter(t => t.status?.toUpperCase() === 'PENDING').length;
-          const resolved = ticketsArray.filter(t => ['RESOLVED', 'CLOSED'].includes(t.status?.toUpperCase())).length;
-          const inProgress = ticketsArray.filter(t => t.status?.toUpperCase() === 'IN_PROGRESS' || t.status?.toUpperCase() === 'IN PROGRESS').length;
-
-          setDashboardData({
-            totalTickets: total,
-            pending: pending,
-            resolved: resolved,
-            inProgress: inProgress,
-            statusSummary: { PENDING: pending, RESOLVED: resolved, IN_PROGRESS: inProgress }
-          });
-          setRecentRequests(Array.isArray(ticketsArray) ? ticketsArray.slice(0, 5) : []);
-        } else {
-          setDashboardData(rawData);
-          try {
-            const endpoint = user?.role === 'ADMIN' ? '/tickets/paginated?page=0&size=5' : '/tickets/my';
-            const tktRes = await api.get(endpoint);
-            const ticketsArray = tktRes.data?.content || tktRes.data;
-            setRecentRequests(Array.isArray(ticketsArray) ? ticketsArray.slice(0, 5) : []);
-          } catch (e) {
-            console.error("Could not fetch recent requests", e);
-          }
-        }
+        const response = await api.get('/tickets/dashboard');
+        setDashboardData(response.data);
+        setRecentRequests(Array.isArray(response.data?.recentTickets) ? response.data.recentTickets : []);
       } catch (err) {
         console.error(err);
         toast.error("Failed to load dashboard data");
@@ -91,18 +60,25 @@ export default function Dashboard() {
         setLoading(false);
       }
     };
+
     fetchDashboard();
-  }, [user]);
+  }, [user?.email, user?.role]);
 
   if (loading) return <Loader />;
   if (!dashboardData) return <div className="p-8 text-center text-foreground/50">No data available yet. Please create a request.</div>;
 
   const stats = [
-    { label: 'Total Requests', value: dashboardData.totalTickets || 0, icon: Activity, color: 'text-primary', bg: 'bg-primary/10' },
-    { label: 'Pending', value: dashboardData.pending || dashboardData.statusSummary?.PENDING || 0, icon: Clock, color: 'text-warning', bg: 'bg-warning/10' },
-    { label: 'Resolved', value: dashboardData.resolved || dashboardData.statusSummary?.RESOLVED || dashboardData.statusSummary?.CLOSED || 0, icon: CheckCircle, color: 'text-success', bg: 'bg-success/10' },
-    { label: 'In Progress', value: dashboardData.inProgress || dashboardData.statusSummary?.IN_PROGRESS || 0, icon: AlertCircle, color: 'text-accent-500', bg: 'bg-accent-500/10' },
+    { label: 'Total Tickets', value: dashboardData.totalTickets || 0, icon: Activity, color: 'text-primary', bg: 'bg-primary/10', filterKey: 'ALL' },
+    { label: 'Pending Tickets', value: dashboardData.pending || dashboardData.statusSummary?.PENDING || 0, icon: Clock, color: 'text-warning', bg: 'bg-warning/10', filterKey: 'PENDING' },
+    { label: 'Resolved Tickets', value: dashboardData.resolved || dashboardData.statusSummary?.RESOLVED || dashboardData.statusSummary?.CLOSED || 0, icon: CheckCircle, color: 'text-success', bg: 'bg-success/10', filterKey: 'RESOLVED' },
+    { label: 'In Progress Tickets', value: dashboardData.inProgress || dashboardData.statusSummary?.IN_PROGRESS || 0, icon: AlertCircle, color: 'text-accent-500', bg: 'bg-accent-500/10', filterKey: 'IN_PROGRESS' },
   ];
+
+  const handleCardActivation = (filterKey) => {
+    const basePath = '/tickets';
+    const nextPath = filterKey === 'ALL' ? basePath : `${basePath}?status=${filterKey.toLowerCase()}`;
+    navigate(nextPath);
+  };
 
   return (
     <div className="space-y-6">
@@ -116,7 +92,18 @@ export default function Dashboard() {
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, index) => (
           <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: index * 0.1 }}>
-            <Card className="border-border/50 hover:shadow-soft transition-all duration-300">
+            <Card
+              className="border-border/50 cursor-pointer transition-all duration-300 hover:shadow-soft hover:border-primary/30"
+              onClick={() => handleCardActivation(stat.filterKey)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  handleCardActivation(stat.filterKey);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+            >
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>

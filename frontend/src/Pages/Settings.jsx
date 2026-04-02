@@ -15,7 +15,7 @@ import {
     EyeOff,
     Download,
     RefreshCw,
-    AlertTriangle,
+    Mail,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '../Components/ui/Card';
 import { Input } from '../Components/ui/Input';
@@ -45,6 +45,7 @@ export default function Settings() {
 
     const isDark = theme === 'dark';
     const supportsServerSettings = user?.role === 'USER';
+    const isAdmin = user?.role === 'ADMIN';
 
     const [name, setName] = useState(user?.name || '');
     const [notifications, setNotifications] = useState(preferences.notifications);
@@ -56,6 +57,11 @@ export default function Settings() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPasswords, setShowPasswords] = useState(false);
     const [busySection, setBusySection] = useState('');
+    const [adminSettings, setAdminSettings] = useState({
+        systemName: 'ServiceTracker',
+        supportEmail: 'support@servicetracker.com',
+    });
+    const [adminSettingsLoading, setAdminSettingsLoading] = useState(false);
 
     useEffect(() => {
         if (user?.name) {
@@ -69,6 +75,43 @@ export default function Settings() {
         setLanguage(preferences.language);
         setAccessibility(preferences.accessibility);
     }, [preferences]);
+
+    useEffect(() => {
+        if (!isAdmin) {
+            setAdminSettingsLoading(false);
+            return;
+        }
+
+        let cancelled = false;
+
+        const loadAdminSettings = async () => {
+            setAdminSettingsLoading(true);
+            try {
+                // Load the lightweight admin configuration only for admin sessions.
+                const response = await api.get('/admin/settings');
+                if (!cancelled && response.data) {
+                    setAdminSettings({
+                        systemName: response.data.systemName || 'ServiceTracker',
+                        supportEmail: response.data.supportEmail || 'support@servicetracker.com',
+                    });
+                }
+            } catch (error) {
+                if (!cancelled) {
+                    showNotification(error.response?.data?.error || 'Failed to load admin settings.', 'error');
+                }
+            } finally {
+                if (!cancelled) {
+                    setAdminSettingsLoading(false);
+                }
+            }
+        };
+
+        loadAdminSettings();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [isAdmin]);
 
     const persistPreferences = (overrides = {}) => {
         setPreferences((currentPreferences) => ({
@@ -275,6 +318,32 @@ export default function Settings() {
         }
     };
 
+    const saveAdminSettings = async () => {
+        if (!adminSettings.systemName.trim() || !adminSettings.supportEmail.trim()) {
+            showNotification('Please fill in both admin settings fields.', 'error');
+            return;
+        }
+
+        setBusySection('admin-settings');
+
+        try {
+            const response = await api.put('/admin/settings', {
+                systemName: adminSettings.systemName.trim(),
+                supportEmail: adminSettings.supportEmail.trim(),
+            });
+
+            setAdminSettings({
+                systemName: response.data?.systemName || adminSettings.systemName.trim(),
+                supportEmail: response.data?.supportEmail || adminSettings.supportEmail.trim(),
+            });
+            showNotification('Admin settings updated successfully.', 'success', 'Settings Saved');
+        } catch (error) {
+            showNotification(error.response?.data?.error || 'Failed to save admin settings.', 'error');
+        } finally {
+            setBusySection('');
+        }
+    };
+
     if (preferencesLoading && supportsServerSettings) {
         return (
             <div className="flex min-h-[40vh] items-center justify-center text-foreground/60">
@@ -283,25 +352,86 @@ export default function Settings() {
         );
     }
 
-    if (!supportsServerSettings) {
+    if (isAdmin && adminSettingsLoading) {
         return (
-            <div className="max-w-3xl mx-auto space-y-6">
+            <div className="flex min-h-[40vh] items-center justify-center text-foreground/60">
+                Loading your settings...
+            </div>
+        );
+    }
+
+    if (isAdmin) {
+        return (
+            <div className="max-w-5xl mx-auto space-y-8">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-                    <p className="text-foreground/60 mt-1">Account settings are currently available for standard user accounts only.</p>
+                    <p className="text-foreground/60 mt-1">Manage admin-level system configuration and appearance.</p>
                 </div>
 
-                <Card className="border-border/50 shadow-soft">
-                    <CardHeader className="border-b border-border/50 pb-4">
-                        <CardTitle className="flex items-center gap-2">
-                            <AlertTriangle size={20} />
-                            Limited Availability
-                        </CardTitle>
-                        <CardDescription>
-                            Admin accounts can still use the quick theme toggle in the header, but the full settings API is only modeled for end-user accounts in this project.
-                        </CardDescription>
-                    </CardHeader>
-                </Card>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+                        <Card className="border-border/50 shadow-soft">
+                            <CardHeader className="border-b border-border/50 pb-4">
+                                <CardTitle>Admin Settings</CardTitle>
+                                <CardDescription>Update the shared system details visible to your support team.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="pt-6 space-y-4">
+                                <Input
+                                    label="System Name"
+                                    icon={Database}
+                                    value={adminSettings.systemName}
+                                    onChange={(event) => setAdminSettings((current) => ({ ...current, systemName: event.target.value }))}
+                                />
+                                <Input
+                                    label="Support Email"
+                                    icon={Mail}
+                                    type="email"
+                                    value={adminSettings.supportEmail}
+                                    onChange={(event) => setAdminSettings((current) => ({ ...current, supportEmail: event.target.value }))}
+                                />
+                            </CardContent>
+                            <CardFooter className="flex justify-end border-t border-border/50 pt-4">
+                                <Button onClick={saveAdminSettings} disabled={busySection !== ''}>
+                                    <Save size={16} className="mr-2" />
+                                    {busySection === 'admin-settings' ? 'Saving...' : 'Save Admin Settings'}
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    </motion.div>
+
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }}>
+                        <Card className="border-border/50 shadow-soft">
+                            <CardHeader className="border-b border-border/50 pb-4">
+                                <CardTitle>Appearance</CardTitle>
+                                <CardDescription>Customize the admin workspace theme.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="pt-6 space-y-4">
+                                <div className="flex items-center justify-between p-4 border border-border/50 rounded-xl bg-muted/20">
+                                    <div className="flex items-center gap-3">
+                                        {isDark ? <Moon className="text-primary" /> : <Sun className="text-warning" />}
+                                        <div>
+                                            <h4 className="font-medium text-sm">Dark Mode</h4>
+                                            <p className="text-xs text-foreground/60">Toggle between light and dark themes</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={toggleTheme}
+                                        className={`w-12 h-6 rounded-full relative transition-colors ${isDark ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                                    >
+                                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${isDark ? 'left-7' : 'left-1'}`}></div>
+                                    </button>
+                                </div>
+
+                                <div className="rounded-xl border border-border/50 bg-muted/20 p-4 text-sm text-foreground/70">
+                                    <div className="font-medium text-foreground">{user?.name || user?.email}</div>
+                                    <div className="mt-1">{user?.email}</div>
+                                    <div className="mt-3 text-xs uppercase tracking-[0.2em] text-foreground/45">{user?.role || 'ADMIN'} account</div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                </div>
             </div>
         );
     }

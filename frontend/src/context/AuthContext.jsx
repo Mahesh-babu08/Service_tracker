@@ -4,9 +4,26 @@ import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext(null);
 
+const getStoredToken = () => localStorage.getItem('token') || sessionStorage.getItem('token');
+
+const buildUserFromToken = (decoded) => {
+    const email = decoded.sub || decoded.email || '';
+    const rawRole = decoded.role || (Array.isArray(decoded.roles) && decoded.roles[0]) || 'USER';
+    const role = typeof rawRole === 'string' && rawRole.startsWith('ROLE_')
+        ? rawRole.replace('ROLE_', '')
+        : rawRole;
+
+    return {
+        email,
+        role,
+        // Prefer the explicit name from the JWT, then gracefully fall back to the email.
+        name: decoded.name || decoded.fullName || email || 'User'
+    };
+};
+
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
-    const [token, setToken] = useState(localStorage.getItem('token'));
+    const [token, setToken] = useState(getStoredToken());
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
@@ -14,12 +31,7 @@ export function AuthProvider({ children }) {
         if (token) {
             try {
                 const decoded = jwtDecode(token);
-                // Map common properties from typical Spring Boot JWT claims
-                setUser({
-                    email: decoded.sub || decoded.email,
-                    role: decoded.role || (decoded.roles && decoded.roles[0]) || 'USER',
-                    name: decoded.name || decoded.sub || 'User'
-                });
+                setUser(buildUserFromToken(decoded));
             } catch (err) {
                 console.error("Invalid or expired token", err);
                 logout();
@@ -31,15 +43,25 @@ export function AuthProvider({ children }) {
     }, [token]);
 
     const login = (newToken) => {
+        sessionStorage.removeItem('token');
         localStorage.setItem('token', newToken);
         setToken(newToken);
     };
 
-    const logout = () => {
+    const logout = ({ redirect = true } = {}) => {
+        // Clear both storage locations so auth pages can always force a clean session.
         localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
         setToken(null);
         setUser(null);
-        navigate('/login');
+
+        if (redirect) {
+            navigate('/login');
+        }
+    };
+
+    const clearAuth = () => {
+        logout({ redirect: false });
     };
 
     const updateUser = (updates) => {
@@ -51,7 +73,7 @@ export function AuthProvider({ children }) {
     }
 
     return (
-        <AuthContext.Provider value={{ user, token, login, logout, updateUser }}>
+        <AuthContext.Provider value={{ user, token, login, logout, clearAuth, updateUser }}>
             {children}
         </AuthContext.Provider>
     );

@@ -1,14 +1,8 @@
-import { useNotifications } from '../context/NotificationContext';
 import toast from 'react-hot-toast';
 
 export function useNotification() {
-    const { addNotification } = useNotifications();
-
-    const showNotification = (message, type = 'info', title = null) => {
-        // Add to persistent notifications
-        addNotification(message, type, title);
-
-        // Show toast notification
+    const showNotification = (message, type = 'info', _title = null) => {
+        // Keep action feedback as popups only; bell notifications now come from the backend.
         switch (type) {
             case 'success':
                 toast.success(message);

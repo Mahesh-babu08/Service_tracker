@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from 'react';
-// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../Components/ui/Card';
 import { Badge } from '../Components/ui/Badge';
 import { Button } from '../Components/ui/Button';
 import { Loader } from '../Components/ui/Loader';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
 import api from '../Services/api';
 import { getLocaleForLanguage } from '../utils/preferences';
 import toast from 'react-hot-toast';
+
+const PAGE_SIZE = 6;
 
 const getStatusBadge = (status) => {
     if (!status) return <Badge>Unknown</Badge>;
@@ -38,6 +39,28 @@ const getPriorityColor = (priority) => {
     }
 };
 
+const canUserDeleteTicket = (ticket, user) => {
+    if (user?.role !== 'USER') {
+        return false;
+    }
+
+    const normalizedStatus = ticket?.status?.toUpperCase();
+    return normalizedStatus !== 'IN_PROGRESS' && normalizedStatus !== 'IN PROGRESS';
+};
+
+const normalizeStatusFilter = (value) => {
+    if (!value) {
+        return '';
+    }
+
+    const normalized = value.toUpperCase().replace(/\s+/g, '_');
+    return normalized === 'ALL' ? '' : normalized;
+};
+
+const normalizePriorityFilter = (value) => {
+    return value ? value.toUpperCase() : '';
+};
+
 export default function Requests() {
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -46,37 +69,44 @@ export default function Requests() {
     const [totalElements, setTotalElements] = useState(0);
 
     const location = useLocation();
+    const navigate = useNavigate();
     const searchParams = new URLSearchParams(location.search);
     const searchString = searchParams.get('search') || '';
+    const statusFilter = normalizeStatusFilter(searchParams.get('status'));
+    const priorityFilter = normalizePriorityFilter(searchParams.get('priority'));
     const { user } = useAuth();
     const { preferences } = usePreferences();
     const locale = getLocaleForLanguage(preferences.language);
-    
-    // Manage local filtering state (mostly used for standard users)
-    const [statusFilter, setStatusFilter] = useState('');
-    const [priorityFilter, setPriorityFilter] = useState('');
-    const [searchInput, setSearchInput] = useState(searchString);
+
+    const isAdmin = user?.role === 'ADMIN';
 
     const fetchTickets = async (pageNumber = 0) => {
         setLoading(true);
         try {
-            let endpoint = '/tickets/my';
-            if (user?.role === 'ADMIN') {
-                if (statusFilter) endpoint = `/tickets/filter/status?status=${statusFilter}&page=${pageNumber}&size=10`;
-                else if (priorityFilter) endpoint = `/tickets/filter/priority?priority=${priorityFilter}&page=${pageNumber}&size=10`;
-                else if (searchInput) endpoint = `/tickets/search?keyword=${searchInput}&page=${pageNumber}&size=10`;
-                else endpoint = `/tickets/paginated?page=${pageNumber}&size=10`;
+            const trimmedSearch = searchString.trim();
+            let endpoint = `/tickets/my?page=${pageNumber}&size=${PAGE_SIZE}`;
+
+            if (isAdmin) {
+                if (statusFilter) endpoint = `/tickets/filter/status?status=${statusFilter}&page=${pageNumber}&size=${PAGE_SIZE}`;
+                else if (priorityFilter) endpoint = `/tickets/filter/priority?priority=${priorityFilter}&page=${pageNumber}&size=${PAGE_SIZE}`;
+                else if (trimmedSearch) endpoint = `/tickets/search?keyword=${encodeURIComponent(trimmedSearch)}&page=${pageNumber}&size=${PAGE_SIZE}`;
+                else endpoint = `/tickets?page=${pageNumber}&size=${PAGE_SIZE}`;
+            } else {
+                if (statusFilter) endpoint += `&status=${statusFilter}`;
+                else if (priorityFilter) endpoint += `&priority=${priorityFilter}`;
+                else if (trimmedSearch) endpoint += `&search=${encodeURIComponent(trimmedSearch)}`;
             }
+
             const res = await api.get(endpoint);
             if (res.data && res.data.content) {
                 setTickets(res.data.content);
-                setTotalPages(res.data.totalPages);
-                setTotalElements(res.data.totalElements);
+                setTotalPages(res.data.totalPages || 1);
+                setTotalElements(res.data.totalElements || 0);
                 setPage(res.data.number || pageNumber);
             } else {
                 const allData = Array.isArray(res.data) ? res.data : [];
-                setTickets(allData.slice(pageNumber * 10, (pageNumber + 1) * 10));
-                setTotalPages(Math.ceil(allData.length / 10));
+                setTickets(allData.slice(pageNumber * PAGE_SIZE, (pageNumber + 1) * PAGE_SIZE));
+                setTotalPages(Math.max(1, Math.ceil(allData.length / PAGE_SIZE)));
                 setTotalElements(allData.length);
                 setPage(pageNumber);
             }
@@ -91,27 +121,58 @@ export default function Requests() {
     useEffect(() => {
         setPage(0);
         fetchTickets(0);
-    }, [user, statusFilter, priorityFilter, searchInput]);
+    }, [isAdmin, location.search, user?.email]);
 
-    const filteredTickets = React.useMemo(() => {
-        let result = tickets;
-        if (user?.role !== 'ADMIN') {
-            if (searchInput) {
-                const lower = searchInput.toLowerCase();
-                result = result.filter(t => 
-                    t.title?.toLowerCase().includes(lower) || 
-                    t.id?.toString().includes(lower)
-                );
-            }
-            if (statusFilter) {
-                result = result.filter(t => t.status?.toUpperCase() === statusFilter.toUpperCase());
-            }
-            if (priorityFilter) {
-                result = result.filter(t => t.priority?.toUpperCase() === priorityFilter.toUpperCase());
-            }
+    const updateFilterParam = (key, value) => {
+        const nextParams = new URLSearchParams(location.search);
+
+        // Keep one primary server-side filter active at a time to mirror the existing endpoint behavior.
+        if (key === 'status' && value) {
+            nextParams.delete('priority');
         }
-        return result;
-    }, [tickets, searchString]);
+
+        if (key === 'priority' && value) {
+            nextParams.delete('status');
+        }
+
+        if (value) {
+            nextParams.set(key, value);
+        } else {
+            nextParams.delete(key);
+        }
+
+        const nextSearch = nextParams.toString();
+        navigate(`${location.pathname}${nextSearch ? `?${nextSearch}` : ''}`);
+    };
+
+    const handleDeleteTicket = async (ticketId) => {
+        const confirmed = window.confirm('Are you sure you want to delete this ticket?');
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            await api.delete(`/tickets/${ticketId}`);
+            toast.success('Ticket deleted successfully');
+
+            const nextTotalElements = Math.max(totalElements - 1, 0);
+            const nextTotalPages = Math.max(1, Math.ceil(nextTotalElements / PAGE_SIZE));
+
+            setTotalElements(nextTotalElements);
+            setTotalPages(nextTotalPages);
+            setTickets((currentTickets) => {
+                const updatedTickets = currentTickets.filter((ticket) => ticket.id !== ticketId);
+
+                if (updatedTickets.length === 0 && page > 0) {
+                    setTimeout(() => fetchTickets(page - 1), 0);
+                }
+
+                return updatedTickets;
+            });
+        } catch (error) {
+            toast.error(error.response?.data?.error || 'Failed to delete ticket');
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -121,8 +182,11 @@ export default function Requests() {
                     <p className="text-foreground/60 mt-1">View and track all your service requests.</p>
                 </div>
                 <div className="flex flex-wrap gap-2 w-full md:w-auto">
-                    <select className="bg-background border border-border text-sm rounded-lg focus:ring-primary p-2 w-full sm:w-auto"
-                            value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+                    <select
+                        className="bg-background border border-border text-sm rounded-lg focus:ring-primary p-2 w-full sm:w-auto"
+                        value={statusFilter}
+                        onChange={(event) => updateFilterParam('status', event.target.value)}
+                    >
                         <option value="">All Statuses</option>
                         <option value="OPEN">Open</option>
                         <option value="PENDING">Pending</option>
@@ -130,15 +194,17 @@ export default function Requests() {
                         <option value="RESOLVED">Resolved</option>
                         <option value="CLOSED">Closed</option>
                     </select>
-                    <select className="bg-background border border-border text-sm rounded-lg focus:ring-primary p-2 w-full sm:w-auto"
-                            value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}>
+                    <select
+                        className="bg-background border border-border text-sm rounded-lg focus:ring-primary p-2 w-full sm:w-auto"
+                        value={priorityFilter}
+                        onChange={(event) => updateFilterParam('priority', event.target.value)}
+                    >
                         <option value="">All Priorities</option>
                         <option value="LOW">Low</option>
                         <option value="MEDIUM">Medium</option>
                         <option value="HIGH">High</option>
                         <option value="CRITICAL">Critical</option>
                     </select>
-                    {/* Search input removed */}
                 </div>
             </div>
 
@@ -159,14 +225,21 @@ export default function Requests() {
                                             <th className="px-6 py-4 font-medium">Status</th>
                                             <th className="px-6 py-4 font-medium">Priority</th>
                                             <th className="px-6 py-4 font-medium text-right">Created Date</th>
+                                            {!isAdmin && <th className="px-6 py-4 font-medium text-right">Actions</th>}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/50">
-                                        {filteredTickets.length > 0 ? filteredTickets.map((req, i) => (
+                                        {tickets.length > 0 ? tickets.map((req) => (
                                             <motion.tr key={req.id} className="hover:bg-muted/30 transition-colors group">
                                                 <td className="px-6 py-4">
                                                     <div className="font-medium text-foreground">{req.title}</div>
                                                     <div className="text-xs text-foreground/50 mt-1 uppercase tracking-wider">#{req.id}</div>
+                                                    {isAdmin && req.deletedByUser && (
+                                                        // Keep user-soft-deleted tickets visible to admins with context.
+                                                        <div className="mt-2 text-xs font-medium text-destructive">
+                                                            This ticket was deleted by the user
+                                                        </div>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     {getStatusBadge(req.status)}
@@ -177,9 +250,25 @@ export default function Requests() {
                                                 <td className="px-6 py-4 text-right text-foreground/50">
                                                     {new Date(req.createdAt || req.date || new Date()).toLocaleString(locale)}
                                                 </td>
+                                                {!isAdmin && (
+                                                    <td className="px-6 py-4 text-right">
+                                                        {canUserDeleteTicket(req, user) ? (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="destructive"
+                                                                onClick={() => handleDeleteTicket(req.id)}
+                                                                className="h-8"
+                                                            >
+                                                                <Trash2 size={14} className="mr-1" /> Delete
+                                                            </Button>
+                                                        ) : (
+                                                            <span className="text-xs text-foreground/40">Unavailable</span>
+                                                        )}
+                                                    </td>
+                                                )}
                                             </motion.tr>
                                         )) : (
-                                            <tr><td colSpan="4" className="text-center py-8 text-foreground/50">
+                                            <tr><td colSpan={isAdmin ? 4 : 5} className="text-center py-8 text-foreground/50">
                                                 {searchString ? `No tickets match "${searchString}"` : 'No tickets found.'}
                                             </td></tr>
                                         )}
@@ -188,7 +277,6 @@ export default function Requests() {
                             </div>
                         )}
 
-                        {/* Pagination Controls */}
                         {!loading && totalPages > 1 && (
                             <div className="flex items-center justify-between px-6 py-4 border-t border-border/50 bg-card rounded-b-2xl">
                                 <span className="text-sm text-foreground/60">

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Menu, Bell, Sun, Moon, LogOut, User as UserIcon, CheckCheck, Trash2, ChevronDown, Settings as SettingsIcon } from 'lucide-react';
+import { Menu, Bell, Sun, Moon, LogOut, User as UserIcon, CheckCheck, Check, Trash2, ChevronDown, Settings as SettingsIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 // import { Input } from './ui/Input';
 import { Button } from './ui/Button';
@@ -11,7 +11,7 @@ import { useNotifications } from '../context/NotificationContext';
 export function Navbar({ onMenuClick }) {
     const { user, logout } = useAuth();
     const { theme, toggleTheme } = useTheme();
-    const { notifications, unreadCount, markAsRead, markAllAsRead, clearNotifications } = useNotifications();
+    const { notifications, unreadCount, loadingNotifications, loadNotifications, markAsRead, markAllAsRead, deleteNotification, deleteAllNotifications } = useNotifications();
     const navigate = useNavigate();
     // const [searchQuery, setSearchQuery] = useState('');
     const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -39,13 +39,16 @@ export function Navbar({ onMenuClick }) {
         markAsRead(id);
     };
 
+    const handleNotificationDelete = (id) => {
+        deleteNotification(id);
+    };
+
     const handleMarkAllRead = () => {
         markAllAsRead();
     };
 
-    const handleClearAll = () => {
-        clearNotifications();
-        setIsNotificationsOpen(false);
+    const handleDeleteAllNotifications = () => {
+        deleteAllNotifications();
     };
 
     const formatTimestamp = (timestamp) => {
@@ -71,8 +74,15 @@ export function Navbar({ onMenuClick }) {
         }
     };
 
-    const userInitials = user?.name
-        ? user.name
+    const getNotificationSubtitle = (notification) => {
+        const actionLabel = notification?.actionType === 'DELETED' ? 'Deleted' : 'Created';
+        return `${actionLabel} by ${notification?.createdBy || 'Unknown user'}`;
+    };
+
+    const displayName = user?.name || user?.email || 'User';
+    const displayEmail = user?.email || displayName;
+    const userInitials = displayName
+        ? displayName
             .split(/\s+/)
             .filter(Boolean)
             .slice(0, 2)
@@ -94,7 +104,15 @@ export function Navbar({ onMenuClick }) {
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                        onClick={async () => {
+                            const nextOpenState = !isNotificationsOpen;
+
+                            setIsNotificationsOpen(nextOpenState);
+
+                            if (nextOpenState) {
+                                await loadNotifications();
+                            }
+                        }}
                         className="rounded-full relative"
                         title="Notifications"
                     >
@@ -127,23 +145,27 @@ export function Navbar({ onMenuClick }) {
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={handleClearAll}
+                                            onClick={handleDeleteAllNotifications}
                                             className="text-xs h-7 px-2 text-destructive hover:text-destructive"
                                         >
-                                            <Trash2 size={14} />
+                                            <Trash2 size={14} className="mr-1" />
+                                            Delete all
                                         </Button>
                                     )}
                                 </div>
                             </div>
 
                             <div className="max-h-80 overflow-y-auto">
-                                {notifications.length > 0 ? (
+                                {loadingNotifications ? (
+                                    <div className="p-8 text-center text-foreground/50">
+                                        <p>Loading notifications...</p>
+                                    </div>
+                                ) : notifications.length > 0 ? (
                                     notifications.map((notification) => (
                                         <div
                                             key={notification.id}
-                                            onClick={() => handleNotificationClick(notification.id)}
                                             className={`p-4 border-b border-border/50 hover:bg-muted/30 cursor-pointer transition-colors ${
-                                                !notification.read ? 'bg-primary/5' : ''
+                                                !notification.isRead ? 'bg-primary/5' : ''
                                             }`}
                                         >
                                             <div className="flex items-start gap-3">
@@ -158,10 +180,38 @@ export function Navbar({ onMenuClick }) {
                                                         </span>
                                                     </div>
                                                     <p className="text-sm text-foreground/80 leading-relaxed">
-                                                        {notification.message}
+                                                        {getNotificationSubtitle(notification)}
                                                     </p>
+                                                    <div className="mt-3 flex items-center gap-2">
+                                                        {!notification.isRead && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={(event) => {
+                                                                    event.stopPropagation();
+                                                                    handleNotificationClick(notification.id);
+                                                                }}
+                                                                className="h-7 px-2 text-xs"
+                                                            >
+                                                                <Check size={14} className="mr-1" />
+                                                                Mark as read
+                                                            </Button>
+                                                        )}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                handleNotificationDelete(notification.id);
+                                                            }}
+                                                            className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                                                        >
+                                                            <Trash2 size={14} className="mr-1" />
+                                                            Delete
+                                                        </Button>
+                                                    </div>
                                                 </div>
-                                                {!notification.read && (
+                                                {!notification.isRead && (
                                                     <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-2"></div>
                                                 )}
                                             </div>
@@ -198,7 +248,7 @@ export function Navbar({ onMenuClick }) {
                             }`}></div>
                             <div className="relative h-10 w-10 rounded-2xl bg-gradient-to-br from-primary via-sky-400 to-emerald-400 p-[2px] shadow-lg">
                                 <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-card text-sm font-bold text-foreground">
-                                    {user?.name ? userInitials : <UserIcon size={16} />}
+                                    {displayName ? userInitials : <UserIcon size={16} />}
                                 </div>
                             </div>
                             <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-background bg-emerald-400 shadow-sm"></span>
@@ -206,7 +256,7 @@ export function Navbar({ onMenuClick }) {
 
                         <div className="hidden min-w-0 sm:block">
                             <p className="max-w-[140px] truncate text-sm font-semibold text-foreground">
-                                {user?.name || 'User'}
+                                {displayName}
                             </p>
                             <p className="text-[11px] uppercase tracking-[0.22em] text-foreground/45">
                                 {user?.role || 'USER'} account
@@ -235,16 +285,16 @@ export function Navbar({ onMenuClick }) {
                                     <div className="relative flex items-center gap-4">
                                         <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary via-sky-400 to-emerald-400 p-[2px] shadow-lg">
                                             <div className="flex h-full w-full items-center justify-center rounded-[18px] bg-card text-lg font-bold text-foreground">
-                                                {user?.name ? userInitials : <UserIcon size={20} />}
+                                                {displayName ? userInitials : <UserIcon size={20} />}
                                             </div>
                                         </div>
 
                                         <div className="min-w-0 flex-1">
                                             <p className="truncate text-base font-semibold text-foreground">
-                                                {user?.name || 'User'}
+                                                {displayName}
                                             </p>
                                             <p className="truncate text-sm text-foreground/60">
-                                                {user?.email}
+                                                {displayEmail}
                                             </p>
                                             <div className="mt-2 flex flex-wrap items-center gap-2">
                                                 <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary">

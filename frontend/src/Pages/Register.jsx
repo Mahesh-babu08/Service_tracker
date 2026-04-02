@@ -1,14 +1,21 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight } from 'lucide-react';
 import API from '../Services/api';
-import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
+import { ThemeToggle } from '../Components/ThemeToggle';
 
 export default function Register() {
   const navigate = useNavigate();
+  const { clearAuth } = useAuth();
   const [formData, setFormData] = useState({ name: '', email: '', password: '', role: "USER" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    // Visiting auth pages should always start from a clean session.
+    clearAuth();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -43,7 +50,8 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-background px-4">
+    <div className="min-h-screen w-full flex items-center justify-center bg-background px-4 transition-colors duration-300">
+      <ThemeToggle />
       <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-lg p-8 transition-colors">
         <h1 className="text-3xl font-bold text-center text-foreground mb-2">Create Account</h1>
         <p className="text-center text-foreground/70 mb-8">Start managing your service requests</p>

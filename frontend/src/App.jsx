@@ -33,6 +33,7 @@ function App() {
                 {/* Protected Routes (Logged-in users) */}
                 <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
                 <Route path="/requests" element={<ProtectedRoute><Layout><Requests /></Layout></ProtectedRoute>} />
+                <Route path="/tickets" element={<ProtectedRoute><Layout><Requests /></Layout></ProtectedRoute>} />
                 <Route path="/create" element={<ProtectedRoute><Layout><CreateTicket /></Layout></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
 
