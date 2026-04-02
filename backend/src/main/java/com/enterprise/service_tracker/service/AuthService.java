@@ -80,7 +80,8 @@ public class AuthService {
             }
 
             // ✅ include role in JWT
-            String token = jwtUtil.generateToken(user.getEmail(), "USER");
+            // Include the name in the JWT so the frontend can render profile details without extra API calls.
+            String token = jwtUtil.generateToken(user.getEmail(), "USER", user.getName());
 
             return new AuthResponse("USER", token, user.getId());
         }
@@ -96,7 +97,8 @@ public class AuthService {
             }
 
             // ✅ FIXED: correct token + role
-            String token = jwtUtil.generateToken(admin.getEmail(), "ADMIN");
+            // Include the name in the JWT so the frontend can render profile details without extra API calls.
+            String token = jwtUtil.generateToken(admin.getEmail(), "ADMIN", admin.getName());
 
             return new AuthResponse("ADMIN", token, admin.getId());
         }

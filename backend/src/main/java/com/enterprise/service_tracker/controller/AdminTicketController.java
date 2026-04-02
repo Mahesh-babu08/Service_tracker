@@ -52,7 +52,7 @@ public class AdminTicketController {
     @GetMapping("/paginated")
     public ResponseEntity<Page<Ticket>> getPaginatedTickets(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "5") int size,
+            @RequestParam(defaultValue = "6") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String direction) {
 
@@ -65,7 +65,7 @@ public class AdminTicketController {
     public ResponseEntity<Page<Ticket>> filterByStatus(
             @RequestParam Status status,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "5") int size) {
+            @RequestParam(defaultValue = "6") int size) {
 
         return ResponseEntity.ok(
                 ticketService.filterByStatus(status, page, size)
@@ -76,7 +76,7 @@ public class AdminTicketController {
     public ResponseEntity<Page<Ticket>> filterByPriority(
             @RequestParam Priority priority,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "5") int size) {
+            @RequestParam(defaultValue = "6") int size) {
 
         return ResponseEntity.ok(
                 ticketService.filterByPriority(priority, page, size)
@@ -87,7 +87,7 @@ public class AdminTicketController {
     public ResponseEntity<Page<Ticket>> searchByTitle(
             @RequestParam String keyword,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "5") int size) {
+            @RequestParam(defaultValue = "6") int size) {
 
         return ResponseEntity.ok(
                 ticketService.searchByTitle(keyword, page, size)

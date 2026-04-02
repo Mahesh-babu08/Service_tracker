@@ -55,6 +55,13 @@ public class Ticket {
     // ✅ Auto timestamp
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    // Soft-delete markers keep history intact for admin review and user notifications.
+    private boolean deletedByUser = false;
+    private boolean deletedByAdmin = false;
+
+    @Column(columnDefinition = "TEXT")
+    private String deletionMessage;
+
     public Ticket() {}
 
     public Ticket(String title, String description, User user, Department department) {
@@ -104,4 +111,16 @@ public class Ticket {
     public LocalDateTime getCreatedAt() { return createdAt; }
 
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public boolean isDeletedByUser() { return deletedByUser; }
+
+    public void setDeletedByUser(boolean deletedByUser) { this.deletedByUser = deletedByUser; }
+
+    public boolean isDeletedByAdmin() { return deletedByAdmin; }
+
+    public void setDeletedByAdmin(boolean deletedByAdmin) { this.deletedByAdmin = deletedByAdmin; }
+
+    public String getDeletionMessage() { return deletionMessage; }
+
+    public void setDeletionMessage(String deletionMessage) { this.deletionMessage = deletionMessage; }
 }

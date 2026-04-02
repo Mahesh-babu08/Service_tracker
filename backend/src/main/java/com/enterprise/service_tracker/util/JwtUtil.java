@@ -1,6 +1,9 @@
 package com.enterprise.service_tracker.util;
 
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtBuilder;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
 
@@ -15,13 +18,23 @@ public class JwtUtil {
 
     private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes());
 
-    // ✅ ADD ROLE INTO TOKEN
     public String generateToken(String email, String role) {
-        return Jwts.builder()
+        return generateToken(email, role, null);
+    }
+
+    // Keep the existing JWT contract and add the display name for navbar/profile rendering.
+    public String generateToken(String email, String role, String name) {
+        JwtBuilder builder = Jwts.builder()
                 .setSubject(email)
-                .claim("role", role) // 🔥 CRITICAL
+                .claim("role", role)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24 * 7))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 7));
+
+        if (name != null && !name.isBlank()) {
+            builder.claim("name", name);
+        }
+
+        return builder
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -30,7 +43,6 @@ public class JwtUtil {
         return extractAllClaims(token).getSubject();
     }
 
-    // ✅ NEW: Extract role
     public String extractRole(String token) {
         return extractAllClaims(token).get("role", String.class);
     }
