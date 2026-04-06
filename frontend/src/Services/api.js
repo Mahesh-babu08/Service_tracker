@@ -2,7 +2,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 
 const API = axios.create({
-  baseURL: "http://localhost:8080/api",
+  baseURL: "https://service-tracker-dt4b.onrender.com",
 });
 
 // ✅ REQUEST INTERCEPTOR
