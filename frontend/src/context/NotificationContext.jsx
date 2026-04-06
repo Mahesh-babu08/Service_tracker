@@ -100,13 +100,10 @@ export function NotificationProvider({ children }) {
         try {
             await api.delete(`/notifications/${id}`);
             setNotifications((prev) => {
-                const targetNotification = prev.find((notification) => notification.id === id);
-
-                if (targetNotification && !targetNotification.isRead) {
-                    setUnreadCount((count) => Math.max(0, count - 1));
-                }
-
-                return prev.filter((notification) => notification.id !== id);
+                const filteredNotifications = prev.filter((notification) => notification.id !== id);
+                const newUnreadCount = filteredNotifications.filter((notification) => !notification.isRead).length;
+                setUnreadCount(newUnreadCount);
+                return filteredNotifications;
             });
         } catch (error) {
             console.error('Failed to delete notification', error);
@@ -123,6 +120,7 @@ export function NotificationProvider({ children }) {
         }
     }, []);
 
+    // Initial load on mount
     useEffect(() => {
         if (!token || !user?.email) {
             clearNotifications();
@@ -131,6 +129,19 @@ export function NotificationProvider({ children }) {
 
         loadNotifications({ showLoader: false });
     }, [clearNotifications, loadNotifications, token, user?.email]);
+
+    // Poll for new notifications every 5 seconds
+    useEffect(() => {
+        if (!token || !user?.email) {
+            return;
+        }
+
+        const pollInterval = setInterval(() => {
+            loadNotifications({ showLoader: false });
+        }, 5000);
+
+        return () => clearInterval(pollInterval);
+    }, [token, user?.email, loadNotifications]);
 
     return (
         <NotificationContext.Provider value={{

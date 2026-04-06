@@ -49,13 +49,18 @@ export default function Login() {
         <h1 className="text-3xl font-bold text-center text-foreground mb-2">Welcome Back</h1>
         <p className="text-center text-foreground/70 mb-8">Sign in to your account</p>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
           <div className="space-y-1 text-left">
             <label className="text-sm font-medium text-foreground">Email</label>
             <div className="relative">
               <Mail className="absolute left-3 top-2.5 h-5 w-5 text-foreground/50" />
               <input
                 type="email"
+                name="login-email"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
                 className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
                 placeholder="name@company.com"
                 value={formData.email}
@@ -70,6 +75,11 @@ export default function Login() {
               <Lock className="absolute left-3 top-2.5 h-5 w-5 text-foreground/50" />
               <input
                 type="password"
+                name="login-password"
+                autoComplete="new-password"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
                 className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
                 placeholder="••••••••"
                 value={formData.password}

@@ -62,13 +62,18 @@ export default function Register() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
           <div className="space-y-1 text-left">
             <label className="text-sm font-medium text-foreground">Full Name</label>
             <div className="relative">
               <User className="absolute left-3 top-2.5 h-5 w-5 text-foreground/50" />
               <input
                 type="text"
+                name="register-name"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="words"
+                spellCheck={false}
                 className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
                 placeholder="John Doe"
                 value={formData.name}
@@ -83,6 +88,11 @@ export default function Register() {
               <Mail className="absolute left-3 top-2.5 h-5 w-5 text-foreground/50" />
               <input
                 type="email"
+                name="register-email"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
                 className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
                 placeholder="name@company.com"
                 value={formData.email}
@@ -97,6 +107,11 @@ export default function Register() {
               <Lock className="absolute left-3 top-2.5 h-5 w-5 text-foreground/50" />
               <input
                 type="password"
+                name="register-password"
+                autoComplete="new-password"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
                 className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
                 placeholder="••••••••"
                 value={formData.password}

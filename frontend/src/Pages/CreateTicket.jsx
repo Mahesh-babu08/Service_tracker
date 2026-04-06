@@ -41,7 +41,9 @@ export default function CreateTicket() {
     );
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
     if (!formData.title || !formData.description || !formData.departmentId) {
       showNotification('Title, description, and department are required.', 'error');
       return;
@@ -73,50 +75,78 @@ export default function CreateTicket() {
             <CardTitle>Request Details</CardTitle>
             <CardDescription>Provide a clear title and detailed description of your issue.</CardDescription>
           </CardHeader>
-          <CardContent className="pt-6 space-y-6">
-            <Input
-              label="Request Title"
-              placeholder="e.g. Cannot access email server"
-              icon={Box}
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            />
-
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-foreground">Department</label>
-              <div className="relative">
-                <Building className="absolute left-3 top-2.5 h-5 w-5 text-foreground/50" />
-                <select
-                  className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-colors appearance-none"
-                  value={formData.departmentId}
-                  onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
-                >
-                  <option value="">Select a department</option>
-                  {departments.map((dept) => (
-                    <option key={dept.id} value={dept.id}>{dept.name}</option>
-                  ))}
-                </select>
-              </div>
+          <form onSubmit={handleSubmit} autoComplete="off">
+            <div
+              aria-hidden="true"
+              className="absolute -left-[9999px] h-0 w-0 overflow-hidden opacity-0 pointer-events-none"
+            >
+              <input type="text" name="fake-username" autoComplete="username" tabIndex={-1} defaultValue="" />
+              <input type="password" name="fake-password" autoComplete="new-password" tabIndex={-1} defaultValue="" />
             </div>
 
-            <div className="relative pt-2">
-              <div className="absolute left-3 top-5 text-gray-500 dark:text-gray-400">
-                <AlignLeft size={18} />
+            <CardContent className="pt-6 space-y-6">
+              <Input
+                type="text"
+                label="Request Title"
+                placeholder="e.g. Cannot access email server"
+                icon={Box}
+                name="request-subject"
+                inputMode="text"
+                autoComplete="new-password"
+                aria-autocomplete="none"
+                data-form-type="other"
+                data-lpignore="true"
+                autoCorrect="off"
+                autoCapitalize="sentences"
+                spellCheck={false}
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              />
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-foreground">Department</label>
+                <div className="relative">
+                  <Building className="absolute left-3 top-2.5 h-5 w-5 text-foreground/50" />
+                  <select
+                    className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-colors appearance-none"
+                    value={formData.departmentId}
+                    onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
+                  >
+                    <option value="">Select a department</option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.id}>{dept.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <textarea
-                className="flex w-full rounded-xl border border-input dark:border-slate-700 bg-background/50 dark:bg-slate-900/50 px-3 py-3 text-sm ring-offset-background placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-all pl-10 min-h-[200px] resize-y"
-                placeholder="Detailed description of the issue..."
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              ></textarea>
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-end border-t border-border/50 pt-6 gap-3">
-            <Button variant="outline" onClick={() => navigate('/requests')} disabled={loading} className="bg-card hover:bg-muted text-foreground">Cancel</Button>
-            <Button onClick={handleSubmit} disabled={loading}>
-              {loading ? 'Submitting...' : 'Submit Request'}
-            </Button>
-          </CardFooter>
+
+              <div className="relative pt-2">
+                <div className="absolute left-3 top-5 text-gray-500 dark:text-gray-400">
+                  <AlignLeft size={18} />
+                </div>
+                <textarea
+                  name="request-description"
+                  autoComplete="off"
+                  aria-autocomplete="none"
+                  data-form-type="other"
+                  data-lpignore="true"
+                  autoCorrect="off"
+                  autoCapitalize="sentences"
+                  spellCheck={false}
+                  className="flex w-full rounded-xl border border-input dark:border-slate-700 bg-background/50 dark:bg-slate-900/50 px-3 py-3 text-sm ring-offset-background placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-all pl-10 min-h-[200px] resize-y"
+                  placeholder="Detailed description of the issue..."
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                ></textarea>
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-end border-t border-border/50 pt-6 gap-3">
+              <Button type="button" variant="outline" onClick={() => navigate('/requests')} disabled={loading} className="bg-card hover:bg-muted text-foreground">Cancel</Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? 'Submitting...' : 'Submit Request'}
+              </Button>
+            </CardFooter>
+          </form>
         </Card>
       </motion.div>
     </div>
