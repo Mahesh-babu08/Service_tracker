@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": "https://service-tracker-dt4b.onrender.com"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
