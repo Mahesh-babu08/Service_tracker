@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://service-tracker-dt4b.onrender.com"
+      "destination": "https://service-tracker-6q0a.onrender.com"
     },
     {
       "source": "/(.*)",
